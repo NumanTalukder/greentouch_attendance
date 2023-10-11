@@ -1,9 +1,9 @@
-import DataTable from '@/components/DataTable'
+import ExtractData from '@/components/ExtractData'
 
 const Home = () => {
   return (
     <div>
-      <DataTable />
+      <ExtractData />
     </div>
   )
 }

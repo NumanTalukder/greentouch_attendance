@@ -1,6 +1,6 @@
 'use client'
 
-import { data } from '@/constant/data'
+// import { data } from '@/constant/data'
 import { useState } from 'react'
 
 // Assuming you have a data structure that maps id to names
@@ -37,10 +37,21 @@ const formatTime12Hour = (time) => {
   })
 }
 
-export default function Home() {
+// Function to calculate time difference
+const calculateTime = (startTime, endTime) => {
+  const start = new Date(`2000-01-01T${startTime}`)
+  const end = new Date(`2000-01-01T${endTime}`)
+  const timeDiff = end - start
+  const hours = Math.floor(timeDiff / 3600000)
+  const minutes = Math.floor((timeDiff % 3600000) / 60000)
+  return `${hours} hours ${minutes} minutes`
+}
+
+export default function Home({ data }) {
   const [sorting, setSorting] = useState({ field: 'date', order: 'asc' })
   const [nameFilter, setNameFilter] = useState('')
   const [dateFilter, setDateFilter] = useState('')
+  console.log(data)
 
   // Preprocess the data to get the first and last checkout data for each id for each day
   const processedData = data.reduce((result, item) => {
@@ -178,6 +189,9 @@ export default function Home() {
             <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
               Last Checkout
             </th>
+            <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+              Total Office Hour
+            </th>
           </tr>
         </thead>
         <tbody className='bg-white divide-y divide-gray-200'>
@@ -191,6 +205,9 @@ export default function Home() {
               </td>
               <td className='px-6 py-4 whitespace-nowrap'>
                 {formatTime12Hour(item.lastCheckout)}
+              </td>
+              <td className='px-6 py-4 whitespace-nowrap'>
+                {calculateTime(item.firstCheckout, item.lastCheckout)}
               </td>
             </tr>
           ))}
