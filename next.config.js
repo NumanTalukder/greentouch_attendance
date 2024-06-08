@@ -1,4 +1,8 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = { distDir: 'build' }
+const nextConfig = {
+  experimental: {
+    missingSuspenseWithCSRBailout: false,
+  },
+}
 
-module.exports = nextConfig
+export default nextConfig
