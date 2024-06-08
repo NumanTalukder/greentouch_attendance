@@ -1,55 +1,15 @@
-'use client'
+"use client"
 
-import DataTable from './DataTable'
-import { useState } from 'react'
-
-const containerStyle = {
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  margin: '20px',
-}
-
-const textareaStyle = {
-  width: '100%',
-  height: '200px',
-  padding: '10px',
-  fontSize: '16px',
-}
-
-const dataStyle = {
-  width: '100%',
-  margin: '10px 0',
-  padding: '10px',
-  border: '1px solid #ccc',
-  borderRadius: '4px',
-  whiteSpace: 'pre-wrap',
-  fontFamily: 'monospace',
-}
-
-// Function to parse the input data into an array of objects
-const parseInputData = (input) => {
-  const lines = input.split('\n')
-  const data = lines
-    .map((line) => {
-      const parts = line.trim().split(/\s+/)
-      if (parts.length >= 3) {
-        const id = parseInt(parts[0])
-        const date = parts[1]
-        const checkout = parts.slice(2).slice(0, 1).join(' ') // Keep only the time part
-        return { id, date, checkout }
-      }
-      return null // Invalid line
-    })
-    .filter(Boolean)
-
-  return data
-}
+import AttendanceSummary from "./AttendanceSummary"
+import { useState } from "react"
+import DetailAttendance from "./DetailAttendance"
+import { parseInputData } from "@/lib"
 
 // JSX function to display the parsed data
 function ExtractData() {
-  const [inputData, setInputData] = useState('')
+  const [inputData, setInputData] = useState("")
   const [data, setData] = useState([])
+  const [tab, setTab] = useState("detail")
 
   // Handle textarea input changes and update parsed data
   const handleTextareaChange = (event) => {
@@ -60,20 +20,45 @@ function ExtractData() {
   }
 
   return (
-    <div style={containerStyle}>
-      <h2>Attendance Data</h2>
+    <div className="flex flex-col items-center px-4 md:px-20">
+      <h2 className="text-4xl font-semibold my-5">Attendance Data</h2>
       <textarea
-        style={textareaStyle}
+        className="w-full h-[200px] p-4 text-md border border-dashed rounded-xl"
         value={inputData}
         onChange={handleTextareaChange}
-        placeholder='Paste your data here'
+        placeholder="Paste your data here"
       />
-      {/* {data.length > 0 && (
-        <div style={dataStyle}>
-          <pre>{JSON.stringify(data, null, 2)}</pre>
-        </div>
-      )} */}
-      <DataTable data={data} />
+
+      <h1 className="text-3xl my-3">Attendance</h1>
+
+      <div className="flex border border-gray-300 rounded-md mb-2">
+        <button
+          className={`py-2 px-2  transition duration-300 ${
+            tab === "detail"
+              ? "bg-green-500 text-black"
+              : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+          }`}
+          onClick={() => setTab("detail")}
+        >
+          Detail
+        </button>
+        <button
+          className={`py-2 px-2  transition duration-300 ${
+            tab === "summary"
+              ? "bg-green-500 text-black"
+              : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+          }`}
+          onClick={() => setTab("summary")}
+        >
+          Summary
+        </button>
+      </div>
+
+      {tab === "detail" ? (
+        <DetailAttendance data={data} />
+      ) : (
+        <AttendanceSummary data={data} />
+      )}
     </div>
   )
 }

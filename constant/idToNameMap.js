@@ -1,0 +1,23 @@
+export const idToNameMap = {
+  1: "Root",
+  2: "Numan Talukder",
+  3: "Abul Hossain",
+  4: "Alamgir Hossain",
+  5: "Md. Fariduzzaman",
+  6: "Jahan Talukder",
+  7: "Jisan Talukder",
+  8: "Maksud Alam Bhuiyan",
+  9: "Sabbir Alam Bhuiyan",
+  10: "Mohon",
+  11: "Abul Kalam",
+  12: "Rajib Talukder",
+  13: "Masud Farvez Rony",
+  14: "Md Tajuddin Talukder",
+  15: "Md Saiful Islam",
+  17: "Shakhawat Hossain",
+  18: "Md Raeduzzaman",
+  19: "Harunur Rashid",
+  20: "Sharif Audit",
+  21: "Sumiya Amin Sharmeen",
+  // Add more id-to-name mappings as needed
+}
