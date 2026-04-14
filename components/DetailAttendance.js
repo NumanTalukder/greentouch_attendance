@@ -1,209 +1,142 @@
 "use client"
 
 import { useState } from "react"
-import { idToNameMap } from "@/constant/idToNameMap"
-import {
-  formatTime12Hour,
-  calculateTime,
-  calculateTotalOfficeHours,
-  isAfter9AM,
-} from "@/lib"
+import EmployeesModal from "@/components/modal/EmployeesModal"
+import { useEmployees } from "@/lib/useEmployees"
 
-const Home = ({ data }) => {
-  const [sorting, setSorting] = useState({ field: "date", order: "asc" })
-  const [nameFilter, setNameFilter] = useState("")
-  const [dateFilter, setDateFilter] = useState("")
-  const [tab, setTab] = useState("detail")
+// Format time
+const formatTime12Hour = (time) => {
+  const parsed = new Date(`2000-01-01T${time}`)
+  return parsed.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  })
+}
 
-  // Preprocess the data to get the first and last checkout data for each id for each day
+// Calculate duration
+const calculateTime = (start, end) => {
+  const s = new Date(`2000-01-01T${start}`)
+  const e = new Date(`2000-01-01T${end}`)
+
+  const diff = e - s
+  const h = Math.floor(diff / 3600000)
+  const m = Math.floor((diff % 3600000) / 60000)
+
+  return `${h}h ${m}m`
+}
+
+export default function Home({ data = [] }) {
+  const { employees, saveEmployees } = useEmployees()
+
+  const [sorting, setSorting] = useState({
+    field: "date",
+    order: "asc",
+  })
+
+  const [showEmployees, setShowEmployees] = useState(false)
+
+  // Process data
   const processedData = data.reduce((result, item) => {
     const key = `${item.id}-${item.date}`
+
     if (!result[key]) {
       result[key] = {
         id: item.id,
-        name: idToNameMap[item.id], // Get the name based on id
+        name: employees[item.id] || "Unknown",
         date: item.date,
         firstCheckout: item.checkout,
         lastCheckout: item.checkout,
       }
     } else {
-      const existingItem = result[key]
-      if (item.checkout < existingItem.firstCheckout) {
-        existingItem.firstCheckout = item.checkout
+      if (item.checkout < result[key].firstCheckout) {
+        result[key].firstCheckout = item.checkout
       }
-      if (item.checkout > existingItem.lastCheckout) {
-        existingItem.lastCheckout = item.checkout
+      if (item.checkout > result[key].lastCheckout) {
+        result[key].lastCheckout = item.checkout
       }
     }
+
     return result
   }, {})
 
   const processedArray = Object.values(processedData)
 
-  // Sorting function
+  // Sorting
   const sortedArray = [...processedArray].sort((a, b) => {
-    const fieldA = a[sorting.field]
-    const fieldB = b[sorting.field]
     const order = sorting.order === "asc" ? 1 : -1
 
-    if (fieldA < fieldB) {
-      return -1 * order
-    }
-    if (fieldA > fieldB) {
-      return 1 * order
-    }
+    if (a[sorting.field] < b[sorting.field]) return -1 * order
+    if (a[sorting.field] > b[sorting.field]) return 1 * order
     return 0
   })
 
-  // Aggregate data to calculate total office hours and late check-ins
-  const aggregateData = processedArray.reduce((result, item) => {
-    if (!result[item.id]) {
-      result[item.id] = {
-        name: item.name,
-        totalOfficeHours: 0,
-        lateCheckIns: 0,
-      }
-    }
-
-    result[item.id].totalOfficeHours += calculateTotalOfficeHours(
-      item.firstCheckout,
-      item.lastCheckout
-    )
-    if (isAfter9AM(item.firstCheckout)) {
-      result[item.id].lateCheckIns += 1
-    }
-
-    return result
-  }, {})
-
-  const aggregateArray = Object.entries(aggregateData).map(([id, data]) => ({
-    id,
-    ...data,
-    totalOfficeHours: `${Math.floor(data.totalOfficeHours / 60)} hours ${
-      data.totalOfficeHours % 60
-    } minutes`,
-  }))
-
-  // Filtering function
-  const filteredArray = sortedArray.filter(
-    (item) =>
-      (nameFilter === "" ||
-        item.name.toLowerCase().includes(nameFilter.toLowerCase())) &&
-      (dateFilter === "" || item.date.includes(dateFilter))
-  )
-
   return (
-    <main className="flex flex-col items-center justify-center">
-      <table className="min-w-full divide-y divide-gray-200">
+    <main className="p-6 flex flex-col items-center w-full">
+      {/* Header */}
+      <div className="w-full max-w-5xl flex justify-between mb-4">
+        <h1 className="text-xl font-semibold">Attendance</h1>
+
+        <button
+          onClick={() => setShowEmployees(true)}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+        >
+          Employees
+        </button>
+      </div>
+
+      {/* Table */}
+      <table className="min-w-full max-w-5xl divide-y divide-gray-200 border">
         <thead>
           <tr>
             <th
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+              className="border"
               onClick={() =>
                 setSorting({
                   field: "id",
                   order:
-                    sorting.field === "id"
-                      ? sorting.order === "asc"
-                        ? "desc"
-                        : "asc"
+                    sorting.field === "id" && sorting.order === "asc"
+                      ? "desc"
                       : "asc",
                 })
               }
             >
               ID
-              {sorting.field === "id" && (
-                <span
-                  className={`ml-1 ${
-                    sorting.order === "asc" ? "rotate-180" : ""
-                  } inline-block`}
-                >
-                  ▲
-                </span>
-              )}
             </th>
-            <th
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-              onClick={() =>
-                setSorting({
-                  field: "name",
-                  order:
-                    sorting.field === "name"
-                      ? sorting.order === "asc"
-                        ? "desc"
-                        : "asc"
-                      : "asc",
-                })
-              }
-            >
-              Name
-              {sorting.field === "name" && (
-                <span
-                  className={`ml-1 ${
-                    sorting.order === "asc" ? "rotate-180" : ""
-                  } inline-block`}
-                >
-                  ▲
-                </span>
-              )}
-            </th>
-            <th
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-              onClick={() =>
-                setSorting({
-                  field: "date",
-                  order:
-                    sorting.field === "date"
-                      ? sorting.order === "asc"
-                        ? "desc"
-                        : "asc"
-                      : "asc",
-                })
-              }
-            >
-              Date
-              {sorting.field === "date" && (
-                <span
-                  className={`ml-1 ${
-                    sorting.order === "asc" ? "rotate-180" : ""
-                  } inline-block`}
-                >
-                  ▲
-                </span>
-              )}
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              First Checkin
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Last Checkout
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Total Office Hour
-            </th>
+
+            <th className="border">Name</th>
+
+            <th className="border">Date</th>
+            <th className="border">First</th>
+            <th className="border">Last</th>
+            <th className="border">Work</th>
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {filteredArray.map((item, index) => (
-            <tr key={index}>
-              <td className="px-6 py-4 whitespace-nowrap">{item.id}</td>
-              <td className="px-6 py-4 whitespace-nowrap">{item.name}</td>
-              <td className="px-6 py-4 whitespace-nowrap">{item.date}</td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                {formatTime12Hour(item.firstCheckout)}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                {formatTime12Hour(item.lastCheckout)}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
+
+        <tbody>
+          {sortedArray.map((item, i) => (
+            <tr key={i} className="border-t">
+              <td className="border">{item.id}</td>
+              <td className="border">{item.name}</td>
+              <td className="border">{item.date}</td>
+              <td className="border">{formatTime12Hour(item.firstCheckout)}</td>
+              <td className="border">{formatTime12Hour(item.lastCheckout)}</td>
+              <td className="border">
                 {calculateTime(item.firstCheckout, item.lastCheckout)}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      {/* Modal */}
+      {showEmployees && (
+        <EmployeesModal
+          employees={employees}
+          saveEmployees={saveEmployees}
+          onClose={() => setShowEmployees(false)}
+        />
+      )}
     </main>
   )
 }
-
-export default Home
