@@ -107,8 +107,8 @@ export default function Home({ data = [] }) {
             <th className="border">Name</th>
 
             <th className="border">Date</th>
-            <th className="border">First</th>
-            <th className="border">Last</th>
+            <th className="border">Check In</th>
+            <th className="border">Check Out</th>
             <th className="border">Work</th>
           </tr>
         </thead>
@@ -116,12 +116,16 @@ export default function Home({ data = [] }) {
         <tbody>
           {sortedArray.map((item, i) => (
             <tr key={i} className="border-t">
-              <td className="border">{item.id}</td>
-              <td className="border">{item.name}</td>
-              <td className="border">{item.date}</td>
-              <td className="border">{formatTime12Hour(item.firstCheckout)}</td>
-              <td className="border">{formatTime12Hour(item.lastCheckout)}</td>
-              <td className="border">
+              <td className="border p-2">{item.id}</td>
+              <td className="border p-2">{item.name}</td>
+              <td className="border p-2">{item.date}</td>
+              <td className="border p-2">
+                {formatTime12Hour(item.firstCheckout)}
+              </td>
+              <td className="border p-2">
+                {formatTime12Hour(item.lastCheckout)}
+              </td>
+              <td className="border p-2">
                 {calculateTime(item.firstCheckout, item.lastCheckout)}
               </td>
             </tr>

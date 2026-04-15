@@ -8,7 +8,7 @@ export default function AttendanceSummary({ data }) {
   const { employees } = useEmployees()
 
   const [sorting, setSorting] = useState({
-    field: "date",
+    field: "id",
     order: "asc",
   })
 
@@ -28,6 +28,9 @@ export default function AttendanceSummary({ data }) {
   // ---------------- TIME HELPERS ----------------
   const isAfter9AM = (t) =>
     new Date(`2000-01-01T${t}`) > new Date(`2000-01-01T09:10:59`)
+
+  const isAfter11AM = (t) =>
+    new Date(`2000-01-01T${t}`) > new Date(`2000-01-01T11:00:59`)
 
   const isBefore7PM = (t) =>
     new Date(`2000-01-01T${t}`) < new Date(`2000-01-01T19:00:00`)
@@ -83,6 +86,7 @@ export default function AttendanceSummary({ data }) {
         name: item.name,
         totalMin: 0,
         late: 0,
+        halfDay: 0, // ✅ FIXED
         days: new Set(),
         before7: 0,
         after8: 0,
@@ -92,7 +96,12 @@ export default function AttendanceSummary({ data }) {
 
     acc[item.id].totalMin += minutesDiff(item.first, item.last)
 
-    if (isAfter9AM(item.first)) acc[item.id].late++
+    // ✅ CORRECT ORDER (IMPORTANT)
+    if (isAfter11AM(item.first)) {
+      acc[item.id].halfDay++
+    } else if (isAfter9AM(item.first)) {
+      acc[item.id].late++
+    }
 
     if (isBefore7PM(item.last)) acc[item.id].before7++
 
@@ -145,8 +154,9 @@ export default function AttendanceSummary({ data }) {
             <th>ID</th>
             <th>Name</th>
             <th>Total Hours</th>
-            <th>Late</th>
             <th>Days</th>
+            <th>Late</th>
+            <th>Half Day</th>
             <th>Before 7PM</th>
             <th>After 8PM</th>
             <th>Overtime</th>
@@ -158,8 +168,9 @@ export default function AttendanceSummary({ data }) {
               <td>${i.id}</td>
               <td>${i.name}</td>
               <td>${i.totalHours}</td>
-              <td>${i.late}</td>
               <td>${i.days}</td>
+              <td>${i.late}</td>
+              <td>${i.halfDay}</td>
               <td>${i.before7}</td>
               <td>${i.after8}</td>
               <td>${i.overtime}</td>
@@ -180,7 +191,6 @@ export default function AttendanceSummary({ data }) {
   // ---------------- UI ----------------
   return (
     <main className="p-6 w-full max-w-none">
-      {/* HEADER */}
       <div className="flex justify-between items-center mb-5">
         <h1 className="text-2xl font-bold">Attendance Summary</h1>
 
@@ -192,7 +202,6 @@ export default function AttendanceSummary({ data }) {
         </button>
       </div>
 
-      {/* TABLE WRAPPER */}
       <div className="w-full overflow-x-auto border rounded-lg shadow">
         <table className="w-full text-sm min-w-[900px]">
           <thead className="bg-gray-100">
@@ -200,8 +209,9 @@ export default function AttendanceSummary({ data }) {
               <th className="p-2 border">ID</th>
               <th className="p-2 border">Name</th>
               <th className="p-2 border">Total Hours</th>
-              <th className="p-2 border">Late</th>
               <th className="p-2 border">Days</th>
+              <th className="p-2 border">Late</th>
+              <th className="p-2 border">Half Day</th>
               <th className="p-2 border">Before 7PM</th>
               <th className="p-2 border">After 8PM</th>
               <th className="p-2 border">Overtime</th>
@@ -214,8 +224,9 @@ export default function AttendanceSummary({ data }) {
                 <td className="p-2 border">{i.id}</td>
                 <td className="p-2 border">{i.name}</td>
                 <td className="p-2 border">{i.totalHours}</td>
-                <td className="p-2 border">{i.late}</td>
                 <td className="p-2 border">{i.days}</td>
+                <td className="p-2 border">{i.late}</td>
+                <td className="p-2 border">{i.halfDay}</td>
                 <td className="p-2 border">{i.before7}</td>
                 <td className="p-2 border">{i.after8}</td>
                 <td className="p-2 border">{i.overtime}</td>
@@ -225,7 +236,6 @@ export default function AttendanceSummary({ data }) {
         </table>
       </div>
 
-      {/* PRINT MODAL */}
       {showPrint && (
         <PrintModal
           data={finalData}
