@@ -94,6 +94,22 @@ export default function AttendanceSummary({ data }) {
       }
     }
 
+    const reportTitle = (() => {
+      if (!data.length) return "Attendance Report"
+
+      // example: 2026-04-01
+      const firstDate = data[0]?.date
+
+      const dt = new Date(firstDate)
+
+      const monthYear = dt.toLocaleString("en-US", {
+        month: "long",
+        year: "numeric",
+      })
+
+      return `Attendance Report - ${monthYear}`
+    })()
+
     acc[item.id].totalMin += minutesDiff(item.first, item.last)
 
     // ✅ CORRECT ORDER (IMPORTANT)
@@ -140,7 +156,7 @@ export default function AttendanceSummary({ data }) {
     const html = `
       <html>
       <head>
-        <title>Attendance Report</title>
+        <title>${reportTitle}</title>
         <style>
           table { width:100%; border-collapse: collapse; }
           th, td { border:1px solid #000; padding:6px; text-align:center; }
@@ -192,7 +208,7 @@ export default function AttendanceSummary({ data }) {
   return (
     <main className="p-6 w-full max-w-none">
       <div className="flex justify-between items-center mb-5">
-        <h1 className="text-2xl font-bold">Attendance Summary</h1>
+        <h1 className="text-2xl font-bold">{reportTitle}</h1>
 
         <button
           onClick={() => setShowPrint(true)}

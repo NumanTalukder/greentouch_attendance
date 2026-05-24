@@ -23,7 +23,9 @@ function ExtractData() {
     <div className="flex flex-col items-center px-4 md:px-20">
       <h2 className="text-4xl font-semibold my-5">Attendance Data</h2>
       <textarea
-        className="w-full h-[200px] p-4 text-md border border-dashed rounded-xl"
+        className={`w-full p-4 text-md border border-dashed rounded-xl transition-all duration-300 ${
+          inputData ? "h-[80px]" : "h-[200px]"
+        }`}
         value={inputData}
         onChange={handleTextareaChange}
         placeholder="Paste your data here"
