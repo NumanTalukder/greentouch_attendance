@@ -89,7 +89,7 @@ export default function AttendanceSummary({ data }) {
         halfDay: 0, // ✅ FIXED
         days: new Set(),
         before7: 0,
-        after8: 0,
+        after7: 0,
         ot: 0,
       }
     }
@@ -105,8 +105,8 @@ export default function AttendanceSummary({ data }) {
 
     if (isBefore7PM(item.last)) acc[item.id].before7++
 
-    if (isAfter8PM(item.last)) {
-      acc[item.id].after8++
+    if (isAfter7PM(item.last)) {
+      acc[item.id].after7++
       acc[item.id].ot += overtime(item.last)
     }
 
@@ -158,7 +158,7 @@ export default function AttendanceSummary({ data }) {
             <th>Late</th>
             <th>Half Day</th>
             <th>Before 7PM</th>
-            <th>After 8PM</th>
+            <th>After 7PM</th>
             <th>Overtime</th>
           </tr>
           ${filtered
@@ -171,8 +171,8 @@ export default function AttendanceSummary({ data }) {
               <td>${i.days}</td>
               <td>${i.late}</td>
               <td>${i.halfDay}</td>
-              <td>${i.before7}</td>
-              <td>${i.after8}</td>
+              <td>${i.before7}</td>7
+              <td>${i.after7}</td>
               <td>${i.overtime}</td>
             </tr>`,
             )
@@ -213,7 +213,7 @@ export default function AttendanceSummary({ data }) {
               <th className="p-2 border">Late</th>
               <th className="p-2 border">Half Day</th>
               <th className="p-2 border">Before 7PM</th>
-              <th className="p-2 border">After 8PM</th>
+              <th className="p-2 border">After 7PM</th>
               <th className="p-2 border">Overtime</th>
             </tr>
           </thead>
@@ -228,7 +228,7 @@ export default function AttendanceSummary({ data }) {
                 <td className="p-2 border">{i.late}</td>
                 <td className="p-2 border">{i.halfDay}</td>
                 <td className="p-2 border">{i.before7}</td>
-                <td className="p-2 border">{i.after8}</td>
+                <td className="p-2 border">{i.after7}</td>
                 <td className="p-2 border">{i.overtime}</td>
               </tr>
             ))}
