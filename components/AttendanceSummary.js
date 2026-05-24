@@ -35,8 +35,8 @@ export default function AttendanceSummary({ data }) {
   const isBefore7PM = (t) =>
     new Date(`2000-01-01T${t}`) < new Date(`2000-01-01T19:00:00`)
 
-  const isAfter8PM = (t) =>
-    new Date(`2000-01-01T${t}`) > new Date(`2000-01-01T20:00:00`)
+  const isAfter7PM = (t) =>
+    new Date(`2000-01-01T${t}`) > new Date(`2000-01-01T19:10:00`)
 
   const minutesDiff = (s, e) =>
     Math.round(
