@@ -5,7 +5,8 @@
       "name": "greentouch",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 3000
+      "port": 3300,
+      "autoPort": true
     }
   ]
 }

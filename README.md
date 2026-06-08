@@ -45,7 +45,9 @@ Defaults match GreenTouch's schedule — **9:00 AM – 7:00 PM, Friday off**:
 | Day boundary | 5:00 AM | Punches before 5 AM count toward the previous day |
 | Weekend | Friday | Used to count working days for absence |
 | Overtime pay | salary ÷ (days × 8h) × OT hrs | Each employee's own hourly wage (or switch to a flat rate) |
-| Per-day pay | salary ÷ working days | Basis for absent / half-day deductions |
+| Overtime approval | approved hours only | Only authority-approved (signed) OT hours are paid; worked OT is shown for reference |
+| Late deduction | 1 day per 4 lates | `floor(late days ÷ 4)` days of pay (0–3 lates graced; 4–7 → 1 day; 8–11 → 2 …) |
+| Per-day pay | salary ÷ 30 | Basis for absent / half-day / late deductions |
 
 ### Status & absence logic
 
@@ -57,6 +59,9 @@ Defaults match GreenTouch's schedule — **9:00 AM – 7:00 PM, Friday off**:
   Mark them inactive in **Employees** to drop them from reports.
 - **Payroll** only includes employees who have attendance; zero-attendance
   staff are excluded (and counted) rather than paid a full, undeducted salary.
+- **Overtime** worked is computed from punches, but only the hours you **approve**
+  on the Payroll tab (matching the signed sheet) are paid. "Approve all worked"
+  approves everyone at once; per-month approvals are remembered.
 
 ## Develop
 
