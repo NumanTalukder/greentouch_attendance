@@ -10,7 +10,12 @@ import {
   findUnknownIds,
 } from "@/lib/engine"
 import { buildPayroll } from "@/lib/payroll"
-import { useEmployees, useSettings, useInput } from "@/lib/storage"
+import {
+  useEmployees,
+  useSettings,
+  useInput,
+  useApprovedOt,
+} from "@/lib/storage"
 import { STORAGE_KEYS, SAMPLE_DATA } from "@/lib/constants"
 
 import { Icon, Segmented } from "./ui"
@@ -26,6 +31,7 @@ export default function AppShell() {
   const { input, setInput } = useInput()
   const { settings, setSettings } = useSettings()
   const { employees, setEmployees } = useEmployees()
+  const { approved, updateMonth } = useApprovedOt()
 
   const [tab, setTab] = useState("dashboard")
   const [modal, setModal] = useState(null) // "employees" | "settings"
@@ -60,9 +66,20 @@ export default function AppShell() {
     () => buildDashboard(records, summary, period),
     [records, summary, period],
   )
+  // Approved-OT is stored per month; derive the key from the pasted period.
+  const monthKey = period.from ? period.from.slice(0, 7) : ""
+  const approvedForPeriod = useMemo(
+    () => approved[monthKey] || {},
+    [approved, monthKey],
+  )
+  const setApprovedHours = (id, hours) =>
+    updateMonth(monthKey, (m) => ({ ...m, [id]: hours }))
+  const approveAll = (patch) =>
+    updateMonth(monthKey, (m) => ({ ...m, ...patch }))
+
   const payroll = useMemo(
-    () => buildPayroll(summary, settings, period),
-    [summary, settings, period],
+    () => buildPayroll(summary, settings, period, approvedForPeriod),
+    [summary, settings, period, approvedForPeriod],
   )
   const unknownIds = useMemo(
     () => findUnknownIds(records, employees),
@@ -155,7 +172,13 @@ export default function AppShell() {
             <SummaryTable summary={summary} period={period} />
           )}
           {tab === "payroll" && (
-            <PayrollTable summary={summary} settings={settings} period={period} />
+            <PayrollTable
+              payroll={payroll}
+              settings={settings}
+              period={period}
+              onApprove={setApprovedHours}
+              onApproveAll={approveAll}
+            />
           )}
         </div>
 

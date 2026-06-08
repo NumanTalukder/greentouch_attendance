@@ -26,7 +26,7 @@ export default function SettingsModal({ settings, setSettings, onClose }) {
       graceMinutes: Number(draft.graceMinutes) || 0,
       otHourlyRate: Number(draft.otHourlyRate) || 0,
       standardHoursPerDay: Number(draft.standardHoursPerDay) || 8,
-      lateDeductionPerDay: Number(draft.lateDeductionPerDay) || 0,
+      lateGroupSize: Number(draft.lateGroupSize) || 0,
       halfDayPayFactor: Number(draft.halfDayPayFactor) || 0,
       holidays:
         typeof draft.holidays === "string"
@@ -142,6 +142,12 @@ export default function SettingsModal({ settings, setSettings, onClose }) {
             <input type="number" value={draft.standardHoursPerDay} onChange={(e) => set("standardHoursPerDay", e.target.value)} className={`${inp} w-full`} />
           </Field>
         )}
+        <Field
+          label="Lates per 1-day cut"
+          hint={`Every ${draft.lateGroupSize || 0} lates = 1 day; first ${Math.max(0, (Number(draft.lateGroupSize) || 1) - 1)} graced`}
+        >
+          <input type="number" min={0} value={draft.lateGroupSize} onChange={(e) => set("lateGroupSize", e.target.value)} className={`${inp} w-full`} />
+        </Field>
         <Field label="Half-day pays (%)" hint="Rest is deducted">
           <input
             type="number"
@@ -150,8 +156,11 @@ export default function SettingsModal({ settings, setSettings, onClose }) {
             className={`${inp} w-full`}
           />
         </Field>
-        <Field label="Late deduction / day">
-          <input type="number" value={draft.lateDeductionPerDay} onChange={(e) => set("lateDeductionPerDay", e.target.value)} className={`${inp} w-full`} />
+        <Field label="Require OT approval" hint="Pay only signed-off OT hours">
+          <label className="flex items-center gap-2 py-1.5 text-sm text-slate-600 dark:text-slate-300">
+            <input type="checkbox" checked={draft.otApprovalRequired} onChange={(e) => set("otApprovalRequired", e.target.checked)} className="accent-emerald-500" />
+            Approved hours only
+          </label>
         </Field>
         <Field label="Deduct absent days">
           <label className="flex items-center gap-2 py-1.5 text-sm text-slate-600 dark:text-slate-300">

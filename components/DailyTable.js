@@ -243,10 +243,10 @@ export function Toolbar({ search, setSearch, onCSV, onPrint, count, children }) 
   )
 }
 
-export function TableWrap({ children }) {
+export function TableWrap({ children, minWidth = 820 }) {
   return (
     <div className="max-h-[70vh] overflow-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <table className="w-full min-w-[820px] border-collapse text-sm">
+      <table className="w-full border-collapse text-sm" style={{ minWidth }}>
         {children}
       </table>
     </div>
