@@ -1,3 +1,48 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply antialiased;
+  }
+}
+
+/* Tidy, theme-aware scrollbars for the scrollable tables. */
+@layer utilities {
+  .overflow-auto,
+  .overflow-y-auto,
+  .overflow-x-auto {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+  .dark .overflow-auto,
+  .dark .overflow-y-auto,
+  .dark .overflow-x-auto {
+    scrollbar-color: #475569 transparent;
+  }
+  .overflow-auto::-webkit-scrollbar,
+  .overflow-y-auto::-webkit-scrollbar,
+  .overflow-x-auto::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .overflow-auto::-webkit-scrollbar-thumb,
+  .overflow-y-auto::-webkit-scrollbar-thumb,
+  .overflow-x-auto::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 9999px;
+  }
+  .dark .overflow-auto::-webkit-scrollbar-thumb,
+  .dark .overflow-y-auto::-webkit-scrollbar-thumb,
+  .dark .overflow-x-auto::-webkit-scrollbar-thumb {
+    background: #475569;
+  }
+}
+
+::selection {
+  background: rgba(16, 185, 129, 0.25);
+}

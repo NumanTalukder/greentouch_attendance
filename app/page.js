@@ -1,11 +1,5 @@
-import ExtractData from '@/components/ExtractData'
+import AppShell from "@/components/AppShell"
 
-const Home = () => {
-  return (
-    <div>
-      <ExtractData />
-    </div>
-  )
+export default function Home() {
+  return <AppShell />
 }
-
-export default Home
