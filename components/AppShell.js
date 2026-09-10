@@ -14,7 +14,7 @@ import {
   useEmployees,
   useSettings,
   useInput,
-  useApprovedOt,
+  useAdjustments,
 } from "@/lib/storage"
 import { STORAGE_KEYS, SAMPLE_DATA } from "@/lib/constants"
 
@@ -26,12 +26,22 @@ import SummaryTable from "./SummaryTable"
 import PayrollTable from "./PayrollTable"
 import EmployeesModal from "./modals/EmployeesModal"
 import SettingsModal from "./modals/SettingsModal"
+import RecordsModal from "./modals/RecordsModal"
 
 export default function AppShell() {
   const { input, setInput } = useInput()
-  const { settings, setSettings } = useSettings()
-  const { employees, setEmployees } = useEmployees()
-  const { approved, updateMonth } = useApprovedOt()
+  const { settings, setSettings, status: settingsStatus } = useSettings()
+  const { employees, setEmployees, status: employeesStatus } = useEmployees()
+  const { adjustments, updateMonth, status: adjStatus } = useAdjustments()
+
+  // Combined cloud sync status across all synced stores.
+  const syncStatus = useMemo(() => {
+    const all = [employeesStatus, settingsStatus, adjStatus]
+    if (all.includes("saving")) return "saving"
+    if (all.includes("offline")) return "offline"
+    if (all.includes("loading")) return "loading"
+    return "synced"
+  }, [employeesStatus, settingsStatus, adjStatus])
 
   const [tab, setTab] = useState("dashboard")
   const [modal, setModal] = useState(null) // "employees" | "settings"
@@ -40,6 +50,13 @@ export default function AppShell() {
   useEffect(() => {
     setDark(document.documentElement.classList.contains("dark"))
   }, [])
+
+  const logout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" })
+    } catch {}
+    window.location.href = "/login"
+  }
 
   const toggleTheme = () => {
     const next = !dark
@@ -66,20 +83,25 @@ export default function AppShell() {
     () => buildDashboard(records, summary, period),
     [records, summary, period],
   )
-  // Approved-OT is stored per month; derive the key from the pasted period.
+  // Manual adjustments (approved OT, penalties, bonuses) are stored per month;
+  // derive the key from the pasted period.
   const monthKey = period.from ? period.from.slice(0, 7) : ""
-  const approvedForPeriod = useMemo(
-    () => approved[monthKey] || {},
-    [approved, monthKey],
+  const adjForPeriod = useMemo(
+    () => adjustments[monthKey] || { ot: {}, penalty: {}, bonus: {} },
+    [adjustments, monthKey],
   )
-  const setApprovedHours = (id, hours) =>
-    updateMonth(monthKey, (m) => ({ ...m, [id]: hours }))
-  const approveAll = (patch) =>
-    updateMonth(monthKey, (m) => ({ ...m, ...patch }))
+  const setOt = (id, hours) =>
+    updateMonth(monthKey, "ot", (m) => ({ ...m, [id]: hours }))
+  const approveAllOt = (patch) =>
+    updateMonth(monthKey, "ot", (m) => ({ ...m, ...patch }))
+  const setPenalty = (id, amt) =>
+    updateMonth(monthKey, "penalty", (m) => ({ ...m, [id]: amt }))
+  const setBonus = (id, amt) =>
+    updateMonth(monthKey, "bonus", (m) => ({ ...m, [id]: amt }))
 
   const payroll = useMemo(
-    () => buildPayroll(summary, settings, period, approvedForPeriod),
-    [summary, settings, period, approvedForPeriod],
+    () => buildPayroll(summary, settings, period, adjForPeriod),
+    [summary, settings, period, adjForPeriod],
   )
   const unknownIds = useMemo(
     () => findUnknownIds(records, employees),
@@ -111,6 +133,15 @@ export default function AppShell() {
           </div>
 
           <div className="flex items-center gap-2">
+            <CloudStatus status={syncStatus} />
+            <button
+              onClick={() => setModal("records")}
+              title="Monthly records (cloud)"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              <Icon.history className="w-4 h-4" />
+              <span className="hidden md:inline">Records</span>
+            </button>
             <button
               onClick={() => setModal("employees")}
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
@@ -136,6 +167,13 @@ export default function AppShell() {
               className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
             >
               {dark ? <Icon.sun className="w-4 h-4" /> : <Icon.moon className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={logout}
+              title="Log out"
+              className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-rose-50 hover:text-rose-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-rose-900/20"
+            >
+              <Icon.logout className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -176,14 +214,19 @@ export default function AppShell() {
               payroll={payroll}
               settings={settings}
               period={period}
-              onApprove={setApprovedHours}
-              onApproveAll={approveAll}
+              onApprove={setOt}
+              onApproveAll={approveAllOt}
+              onPenalty={setPenalty}
+              onBonus={setBonus}
             />
           )}
         </div>
 
         <footer className="pt-6 pb-2 text-center text-xs text-slate-400">
-          Data stays in your browser · {records.length} day-records processed
+          {syncStatus === "offline"
+            ? "Saved locally · cloud offline"
+            : "Synced to cloud · cached locally"}{" "}
+          · {records.length} day-records processed
         </footer>
       </main>
 
@@ -203,6 +246,35 @@ export default function AppShell() {
           onClose={() => setModal(null)}
         />
       )}
+      {modal === "records" && (
+        <RecordsModal
+          monthKey={monthKey}
+          period={period}
+          payroll={payroll}
+          currency={settings.currency}
+          onClose={() => setModal(null)}
+        />
+      )}
     </div>
+  )
+}
+
+// Small pill showing whether data is syncing to MongoDB.
+function CloudStatus({ status }) {
+  const map = {
+    synced: { tone: "text-emerald-600 dark:text-emerald-400", icon: <Icon.cloud className="w-4 h-4" />, label: "Synced" },
+    saving: { tone: "text-amber-600 dark:text-amber-400", icon: <Icon.cloud className="w-4 h-4 animate-pulse" />, label: "Saving…" },
+    offline: { tone: "text-slate-400", icon: <Icon.cloudOff className="w-4 h-4" />, label: "Offline" },
+    loading: { tone: "text-slate-400", icon: <Icon.cloud className="w-4 h-4 animate-pulse" />, label: "…" },
+  }
+  const s = map[status] || map.loading
+  return (
+    <span
+      title={status === "offline" ? "Cloud unreachable — saved locally" : "Cloud sync"}
+      className={`hidden items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium sm:inline-flex dark:border-slate-700 ${s.tone}`}
+    >
+      {s.icon}
+      {s.label}
+    </span>
   )
 }

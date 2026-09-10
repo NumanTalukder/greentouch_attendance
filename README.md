@@ -2,9 +2,11 @@
 
 Paste the raw export from your ZKTeco attendance machine and instantly get a
 dashboard, daily records, a monthly summary, and a full payroll with payslips.
-Everything runs **in the browser** — no server, no database. Your data and
-settings are saved to the browser's local storage, and the app deploys to
-Vercel exactly as-is.
+
+The app is **offline-first**: it works entirely in the browser (localStorage),
+and when a MongoDB connection is configured it **also syncs** employees,
+settings, monthly adjustments, and archived payroll records to the cloud so the
+data is shared and backed up. The cloud status shows in the top bar.
 
 ## How it works
 
@@ -27,8 +29,9 @@ Vercel exactly as-is.
    - **Daily** — every check-in/out with status, work hours and overtime;
      searchable and filterable (late / half day / left early / overtime).
    - **Summary** — per-employee monthly roll-up with attendance %.
-   - **Payroll** — salary, overtime pay, deductions and net payable, plus
-     printable payslips.
+   - **Payroll** — salary, approved overtime, attendance deductions, plus
+     per-employee **Bonus** and **Penalty** amounts you enter manually, giving
+     **Net = salary + OT + bonus − deductions − penalty**. Printable payslips.
 
 Every table exports to **CSV** and prints a clean, letterheaded report.
 
@@ -63,6 +66,48 @@ Defaults match GreenTouch's schedule — **9:00 AM – 7:00 PM, Friday off**:
   on the Payroll tab (matching the signed sheet) are paid. "Approve all worked"
   approves everyone at once; per-month approvals are remembered.
 
+## Cloud storage (MongoDB)
+
+Optional but recommended. Copy `.env.example` to `.env.local` and set your
+Atlas connection string (keep the DB name `greentouch-attendance` in the path):
+
+```
+MONGODB_URI="mongodb+srv://USER:PASSWORD@CLUSTER.mongodb.net/greentouch-attendance?retryWrites=true&w=majority"
+```
+
+`.env.local` is gitignored and only ever read on the **server** (API routes) —
+the URI never reaches the browser.
+
+## Access & login
+
+The whole app is behind a password. Set two more values in `.env.local`:
+
+```
+APP_PASSWORD="choose-a-strong-password"   # the login password
+AUTH_SECRET="<openssl rand -hex 32>"       # signs the session cookie
+```
+
+A Next.js **middleware** (`middleware.js`) enforces this on every page *and*
+every `/api/*` route: no valid session → pages redirect to `/login`, API calls
+get **401**. So the payroll data can't be read by hitting the API directly.
+Login sets a signed, HTTP-only cookie (7-day session); the top-bar logout button
+clears it. Change `AUTH_SECRET` to force everyone to re-login. On Vercel, set
+`APP_PASSWORD` and `AUTH_SECRET` as environment variables too. Use a dedicated, least-privilege Atlas user,
+and add your server's IP (or `0.0.0.0/0` for testing) under Atlas → Network
+Access. On Vercel, set `MONGODB_URI` in Project → Settings → Environment
+Variables. If it's unset or unreachable, the app runs fine offline on
+localStorage.
+
+Collections created automatically:
+
+| Collection | Shape |
+|------------|-------|
+| `employees` | one document per employee (`_id` = id): name, salary, department… |
+| `state` | singletons `settings` and `adjustments` (per-month OT/penalty/bonus) |
+| `records` | one document per finalised month (`_id` = `YYYY-MM`): totals + rows |
+
+Save a month's snapshot from **Records** in the top bar.
+
 ## Develop
 
 ```bash
@@ -71,10 +116,12 @@ npm run dev      # http://localhost:3000
 npm run build    # production build (outputs to ./build)
 ```
 
-Stack: Next.js 13 (App Router) · React 18 · Tailwind CSS. No other runtime
-dependencies. Source is plain JavaScript:
+Stack: Next.js 13 (App Router) · React 18 · Tailwind CSS · MongoDB driver.
+Source is plain JavaScript:
 
 ```
-lib/        parse · engine · payroll · format · export · storage · constants
+lib/         parse · engine · payroll · format · export · constants
+             storage (offline-first sync) · db + dbState (server-only Mongo)
+app/api/     employees · settings · adjustments · records  (server routes)
 components/  AppShell, Dashboard, DailyTable, SummaryTable, PayrollTable, ui, modals/
 ```
