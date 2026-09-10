@@ -32,8 +32,9 @@ data is shared and backed up. The cloud status shows in the top bar.
    - **Leave** — approve each employee's **earned/sick** days for the month and
      track the year-to-date balance (see below). Approved leave is paid.
    - **Payroll** — salary, approved overtime, attendance deductions, plus
-     per-employee **Bonus** and **Penalty** amounts you enter manually, giving
-     **Net = salary + OT + bonus − deductions − penalty**. Printable payslips.
+     per-employee **Bonus**, **Penalty** and **Advance** amounts you enter
+     manually (advance = a salary advance being recovered), giving
+     **Net = salary + OT + bonus − deductions − penalty − advance**. Printable payslips.
 
 Every table exports to **CSV** and prints a clean, letterheaded report.
 

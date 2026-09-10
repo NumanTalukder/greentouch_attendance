@@ -100,6 +100,8 @@ export default function AppShell() {
     updateMonth(monthKey, "penalty", (m) => ({ ...m, [id]: amt }))
   const setBonus = (id, amt) =>
     updateMonth(monthKey, "bonus", (m) => ({ ...m, [id]: amt }))
+  const setAdvance = (id, amt) =>
+    updateMonth(monthKey, "advance", (m) => ({ ...m, [id]: amt }))
   const setLeaveEarned = (id, days) =>
     updateMonth(monthKey, "leaveEarned", (m) => ({ ...m, [id]: days }))
   const setLeaveSick = (id, days) =>
@@ -238,6 +240,7 @@ export default function AppShell() {
               onApproveAll={approveAllOt}
               onPenalty={setPenalty}
               onBonus={setBonus}
+              onAdvance={setAdvance}
             />
           )}
         </div>

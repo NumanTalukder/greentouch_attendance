@@ -14,6 +14,7 @@ export default function PayrollTable({
   onApproveAll,
   onPenalty,
   onBonus,
+  onAdvance,
 }) {
   const [search, setSearch] = useState("")
   const [sort, setSort] = useState({ field: "id", dir: "asc" })
@@ -68,6 +69,7 @@ export default function PayrollTable({
     { label: "Total Deductions", render: (r) => Math.round(r.totalDeductions) },
     { label: "Bonus", render: (r) => Math.round(r.bonus) },
     { label: "Penalty", render: (r) => Math.round(r.penalty) },
+    { label: "Advance", render: (r) => Math.round(r.advance) },
     { label: "Net Payable", render: (r) => Math.round(r.netPayable) },
   ]
 
@@ -88,11 +90,12 @@ export default function PayrollTable({
         { label: "Deduct.", num: true, render: (r) => formatMoney(r.totalDeductions, c), total: (t) => formatMoney(t.totalDeductions, c) },
         { label: "Bonus", num: true, render: (r) => formatMoney(r.bonus, c), total: (t) => formatMoney(t.bonus, c) },
         { label: "Penalty", num: true, render: (r) => formatMoney(r.penalty, c), total: (t) => formatMoney(t.penalty, c) },
+        { label: "Advance", num: true, render: (r) => formatMoney(r.advance, c), total: (t) => formatMoney(t.advance, c) },
         { label: "Net Payable", num: true, render: (r) => formatMoney(r.netPayable, c), total: (t) => formatMoney(t.netPayable, c) },
       ],
       rows,
       totals,
-      note: `Per-day = salary ÷ ${divisor}. OT ${settings.otMethod === "flat" ? `at ${formatMoney(settings.otHourlyRate, c)}/h` : `= salary ÷ (${divisor} × ${settings.standardHoursPerDay}h)`}, ${approval ? "approved hours only" : "all worked hours"}. Late: 1 day's pay per ${settings.lateGroupSize} late days. Half-day pays ${Math.round(settings.halfDayPayFactor * 100)}%. Only unpaid absences are deducted (approved paid leave is excluded). Net = salary + OT + bonus − deductions − penalty.`,
+      note: `Per-day = salary ÷ ${divisor}. OT ${settings.otMethod === "flat" ? `at ${formatMoney(settings.otHourlyRate, c)}/h` : `= salary ÷ (${divisor} × ${settings.standardHoursPerDay}h)`}, ${approval ? "approved hours only" : "all worked hours"}. Late: 1 day's pay per ${settings.lateGroupSize} late days. Half-day pays ${Math.round(settings.halfDayPayFactor * 100)}%. Only unpaid absences are deducted (approved paid leave is excluded). Net = salary + OT + bonus − deductions − penalty − advance (salary advance recovered).`,
     })
 
   if (!allRows.length && !excludedCount)
@@ -143,7 +146,7 @@ export default function PayrollTable({
         </span>
         <span>Late: 1 day per <b>{settings.lateGroupSize}</b> lates</span>
         <span>Half-day pays <b>{Math.round(settings.halfDayPayFactor * 100)}%</b></span>
-        <span className="font-medium">Net = salary + OT + bonus − deductions − penalty</span>
+        <span className="font-medium">Net = salary + OT + bonus − deductions − penalty − advance</span>
         <span className="text-emerald-600/80 dark:text-emerald-400/70">Edit in Settings</span>
       </div>
 
@@ -195,7 +198,7 @@ export default function PayrollTable({
         </button>
       </Toolbar>
 
-      <TableWrap minWidth={1400}>
+      <TableWrap minWidth={1520}>
         <thead className="sticky top-0 z-10 bg-slate-100 text-xs uppercase tracking-wide dark:bg-slate-800">
           <tr>
             <SortTH field="id" label="ID" sort={sort} setSort={setSort} num />
@@ -211,6 +214,7 @@ export default function PayrollTable({
             <SortTH field="totalDeductions" label="Deductions" sort={sort} setSort={setSort} num />
             <th className="px-3 py-2.5 text-right font-semibold text-emerald-600 dark:text-emerald-400">Bonus (+)</th>
             <th className="px-3 py-2.5 text-right font-semibold text-rose-600 dark:text-rose-400">Penalty (−)</th>
+            <th className="px-3 py-2.5 text-right font-semibold text-rose-600 dark:text-rose-400">Advance (−)</th>
             <SortTH field="netPayable" label="Net Payable" sort={sort} setSort={setSort} num />
             <th className="px-3 py-2.5"></th>
           </tr>
@@ -309,6 +313,9 @@ export default function PayrollTable({
               <td className="px-3 py-2 text-right">
                 {adjInput(r.penalty, (e) => setAmount(onPenalty, r.id, e.target.value), "penalty")}
               </td>
+              <td className="px-3 py-2 text-right">
+                {adjInput(r.advance, (e) => setAmount(onAdvance, r.id, e.target.value), "penalty")}
+              </td>
               <td className={`${numCell} text-base font-bold text-slate-900 dark:text-white`}>
                 {formatMoney(r.netPayable, c)}
               </td>
@@ -335,6 +342,7 @@ export default function PayrollTable({
             <td className="px-3 py-2.5 text-right tabular-nums text-rose-700 dark:text-rose-300">−{formatMoney(totals.totalDeductions, c)}</td>
             <td className="px-3 py-2.5 text-right tabular-nums text-emerald-700 dark:text-emerald-300">{formatMoney(totals.bonus, c)}</td>
             <td className="px-3 py-2.5 text-right tabular-nums text-rose-700 dark:text-rose-300">−{formatMoney(totals.penalty, c)}</td>
+            <td className="px-3 py-2.5 text-right tabular-nums text-rose-700 dark:text-rose-300">−{formatMoney(totals.advance, c)}</td>
             <td className="px-3 py-2.5 text-right text-base tabular-nums text-emerald-700 dark:text-emerald-300">{formatMoney(totals.netPayable, c)}</td>
             <td></td>
           </tr>
