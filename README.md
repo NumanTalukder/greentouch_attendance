@@ -29,6 +29,8 @@ data is shared and backed up. The cloud status shows in the top bar.
    - **Daily** — every check-in/out with status, work hours and overtime;
      searchable and filterable (late / half day / left early / overtime).
    - **Summary** — per-employee monthly roll-up with attendance %.
+   - **Leave** — approve each employee's **earned/sick** days for the month and
+     track the year-to-date balance (see below). Approved leave is paid.
    - **Payroll** — salary, approved overtime, attendance deductions, plus
      per-employee **Bonus** and **Penalty** amounts you enter manually, giving
      **Net = salary + OT + bonus − deductions − penalty**. Printable payslips.
@@ -50,7 +52,8 @@ Defaults match GreenTouch's schedule — **9:00 AM – 7:00 PM, Friday off**:
 | Overtime pay | salary ÷ (days × 8h) × OT hrs | Each employee's own hourly wage (or switch to a flat rate) |
 | Overtime approval | approved hours only | Only authority-approved (signed) OT hours are paid; worked OT is shown for reference |
 | Late deduction | 1 day per 4 lates | `floor(late days ÷ 4)` days of pay (0–3 lates graced; 4–7 → 1 day; 8–11 → 2 …) |
-| Per-day pay | salary ÷ 30 | Basis for absent / half-day / late deductions |
+| Paid leave | 10 earned + 7 sick / year | Leave year **Jul → June**; approved leave is paid, so it isn't deducted |
+| Per-day pay | salary ÷ 30 | Basis for **unpaid** absent / half-day / late deductions |
 
 ### Status & absence logic
 
@@ -65,6 +68,11 @@ Defaults match GreenTouch's schedule — **9:00 AM – 7:00 PM, Friday off**:
 - **Overtime** worked is computed from punches, but only the hours you **approve**
   on the Payroll tab (matching the signed sheet) are paid. "Approve all worked"
   approves everyone at once; per-month approvals are remembered.
+- **Leave** is manually approved on the Leave tab: you enter how many earned/sick
+  days each employee took this month. Those days become **paid** — so an absence
+  covered by leave is *not* deducted; only **unpaid absence** = absent −
+  paid-leave days is deducted. Balances are summed across the Jul–June leave year
+  (10 earned + 7 sick by default) and turn red once exhausted.
 
 ## Cloud storage (MongoDB)
 
@@ -120,8 +128,12 @@ Stack: Next.js 13 (App Router) · React 18 · Tailwind CSS · MongoDB driver.
 Source is plain JavaScript:
 
 ```
-lib/         parse · engine · payroll · format · export · constants
+lib/         parse · engine · payroll · leave · format · export · constants
              storage (offline-first sync) · db + dbState (server-only Mongo)
-app/api/     employees · settings · adjustments · records  (server routes)
-components/  AppShell, Dashboard, DailyTable, SummaryTable, PayrollTable, ui, modals/
+             auth (signed session)
+app/api/     employees · settings · adjustments · records · auth/*  (server routes)
+middleware.js  login gate on every page + API route
+app/login/   password screen
+components/  AppShell, Dashboard, DailyTable, SummaryTable, LeaveTable,
+             PayrollTable, ui, modals/
 ```

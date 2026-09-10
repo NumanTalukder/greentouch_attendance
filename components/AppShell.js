@@ -10,6 +10,7 @@ import {
   findUnknownIds,
 } from "@/lib/engine"
 import { buildPayroll } from "@/lib/payroll"
+import { buildLeave } from "@/lib/leave"
 import {
   useEmployees,
   useSettings,
@@ -24,6 +25,7 @@ import Dashboard from "./Dashboard"
 import DailyTable from "./DailyTable"
 import SummaryTable from "./SummaryTable"
 import PayrollTable from "./PayrollTable"
+import LeaveTable from "./LeaveTable"
 import EmployeesModal from "./modals/EmployeesModal"
 import SettingsModal from "./modals/SettingsModal"
 import RecordsModal from "./modals/RecordsModal"
@@ -98,10 +100,18 @@ export default function AppShell() {
     updateMonth(monthKey, "penalty", (m) => ({ ...m, [id]: amt }))
   const setBonus = (id, amt) =>
     updateMonth(monthKey, "bonus", (m) => ({ ...m, [id]: amt }))
+  const setLeaveEarned = (id, days) =>
+    updateMonth(monthKey, "leaveEarned", (m) => ({ ...m, [id]: days }))
+  const setLeaveSick = (id, days) =>
+    updateMonth(monthKey, "leaveSick", (m) => ({ ...m, [id]: days }))
 
   const payroll = useMemo(
     () => buildPayroll(summary, settings, period, adjForPeriod),
     [summary, settings, period, adjForPeriod],
+  )
+  const leave = useMemo(
+    () => buildLeave(summary, adjustments, monthKey, settings),
+    [summary, adjustments, monthKey, settings],
   )
   const unknownIds = useMemo(
     () => findUnknownIds(records, employees),
@@ -112,6 +122,7 @@ export default function AppShell() {
     { value: "dashboard", label: "Dashboard", icon: <Icon.dashboard className="w-4 h-4" /> },
     { value: "daily", label: "Daily", icon: <Icon.calendar className="w-4 h-4" />, count: records.length || null },
     { value: "summary", label: "Summary", icon: <Icon.users className="w-4 h-4" />, count: dashboard?.totals.activeWithData || null },
+    { value: "leave", label: "Leave", icon: <Icon.leaf className="w-4 h-4" /> },
     { value: "payroll", label: "Payroll", icon: <Icon.wallet className="w-4 h-4" /> },
   ]
 
@@ -208,6 +219,15 @@ export default function AppShell() {
           )}
           {tab === "summary" && (
             <SummaryTable summary={summary} period={period} />
+          )}
+          {tab === "leave" && (
+            <LeaveTable
+              leave={leave}
+              period={period}
+              monthKey={monthKey}
+              onEarned={setLeaveEarned}
+              onSick={setLeaveSick}
+            />
           )}
           {tab === "payroll" && (
             <PayrollTable

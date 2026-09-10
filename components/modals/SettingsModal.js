@@ -28,6 +28,9 @@ export default function SettingsModal({ settings, setSettings, onClose }) {
       standardHoursPerDay: Number(draft.standardHoursPerDay) || 8,
       lateGroupSize: Number(draft.lateGroupSize) || 0,
       halfDayPayFactor: Number(draft.halfDayPayFactor) || 0,
+      earnedLeavePerYear: Number(draft.earnedLeavePerYear) || 0,
+      sickLeavePerYear: Number(draft.sickLeavePerYear) || 0,
+      leaveYearStartMonth: Number(draft.leaveYearStartMonth) || 7,
       holidays:
         typeof draft.holidays === "string"
           ? draft.holidays
@@ -167,6 +170,22 @@ export default function SettingsModal({ settings, setSettings, onClose }) {
             <input type="checkbox" checked={draft.deductAbsent} onChange={(e) => set("deductAbsent", e.target.checked)} className="accent-emerald-500" />
             Subtract one day of pay per absent day
           </label>
+        </Field>
+      </Section>
+
+      <Section title="Paid leave (per leave year)">
+        <Field label="Earned leave / year" hint="Days of paid earned leave">
+          <input type="number" min={0} value={draft.earnedLeavePerYear} onChange={(e) => set("earnedLeavePerYear", e.target.value)} className={`${inp} w-full`} />
+        </Field>
+        <Field label="Sick leave / year" hint="Days of paid sick leave">
+          <input type="number" min={0} value={draft.sickLeavePerYear} onChange={(e) => set("sickLeavePerYear", e.target.value)} className={`${inp} w-full`} />
+        </Field>
+        <Field label="Leave year starts" hint="Balances reset this month">
+          <select value={draft.leaveYearStartMonth} onChange={(e) => set("leaveYearStartMonth", e.target.value)} className={`${inp} w-full`}>
+            {["January","February","March","April","May","June","July","August","September","October","November","December"].map((m, i) => (
+              <option key={m} value={i + 1}>{m}</option>
+            ))}
+          </select>
         </Field>
       </Section>
 

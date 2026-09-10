@@ -54,6 +54,8 @@ export default function PayrollTable({
     { label: "Per Day", render: (r) => Math.round(r.perDay) },
     { label: "Present", render: (r) => r.presentDays },
     { label: "Absent", render: (r) => r.absentDays },
+    { label: "Paid Leave Days", render: (r) => r.paidLeaveDays },
+    { label: "Unpaid Absent", render: (r) => r.unpaidAbsentDays },
     { label: "Late", render: (r) => r.lateDays },
     { label: "Half Day", render: (r) => r.halfDays },
     { label: "Late Deduct Days", render: (r) => r.lateDeductionDays },
@@ -90,7 +92,7 @@ export default function PayrollTable({
       ],
       rows,
       totals,
-      note: `Per-day = salary ÷ ${divisor}. OT ${settings.otMethod === "flat" ? `at ${formatMoney(settings.otHourlyRate, c)}/h` : `= salary ÷ (${divisor} × ${settings.standardHoursPerDay}h)`}, ${approval ? "approved hours only" : "all worked hours"}. Late: 1 day's pay per ${settings.lateGroupSize} late days. Half-day pays ${Math.round(settings.halfDayPayFactor * 100)}%. Net = salary + OT + bonus − deductions − penalty.`,
+      note: `Per-day = salary ÷ ${divisor}. OT ${settings.otMethod === "flat" ? `at ${formatMoney(settings.otHourlyRate, c)}/h` : `= salary ÷ (${divisor} × ${settings.standardHoursPerDay}h)`}, ${approval ? "approved hours only" : "all worked hours"}. Late: 1 day's pay per ${settings.lateGroupSize} late days. Half-day pays ${Math.round(settings.halfDayPayFactor * 100)}%. Only unpaid absences are deducted (approved paid leave is excluded). Net = salary + OT + bonus − deductions − penalty.`,
     })
 
   if (!allRows.length && !excludedCount)
@@ -228,7 +230,20 @@ export default function PayrollTable({
               <td className={`${numCell} text-emerald-600 dark:text-emerald-400`}>{r.presentDays}</td>
               <td className={numCell}>
                 {r.absentDays > 0 ? (
-                  <span className="text-rose-600 dark:text-rose-400">{r.absentDays}</span>
+                  <span
+                    title={
+                      r.paidLeaveDays > 0
+                        ? `${r.absentDays} absent — ${r.paidLeaveDays} paid leave, ${r.unpaidAbsentDays} unpaid`
+                        : undefined
+                    }
+                  >
+                    <span className={r.unpaidAbsentDays > 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-400"}>
+                      {r.absentDays}
+                    </span>
+                    {r.paidLeaveDays > 0 && (
+                      <span className="ml-1 text-xs text-emerald-500">−{r.paidLeaveDays}lv</span>
+                    )}
+                  </span>
                 ) : (
                   <span className="text-slate-300 dark:text-slate-600">0</span>
                 )}
@@ -281,7 +296,7 @@ export default function PayrollTable({
               </td>
               <td className={numCell}>
                 {r.totalDeductions > 0 ? (
-                  <span className="text-rose-600 dark:text-rose-400" title={`Absent ${formatMoney(r.absentDeduction, c)} · Half ${formatMoney(r.halfDayDeduction, c)} · Late ${formatMoney(r.lateDeduction, c)}`}>
+                  <span className="text-rose-600 dark:text-rose-400" title={`Absent(unpaid ${r.unpaidAbsentDays}d) ${formatMoney(r.absentDeduction, c)} · Half ${formatMoney(r.halfDayDeduction, c)} · Late ${formatMoney(r.lateDeduction, c)}`}>
                     −{formatMoney(r.totalDeductions, c)}
                   </span>
                 ) : (
