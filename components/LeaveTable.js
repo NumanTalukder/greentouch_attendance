@@ -9,7 +9,7 @@ export default function LeaveTable({ leave, period, monthKey, onEarned, onSick }
   const [search, setSearch] = useState("")
   const [sort, setSort] = useState({ field: "id", dir: "asc" })
 
-  const { rows: allRows, range, entE, entS } = leave
+  const { rows: allRows, range, entE, entS, fieldMonthly } = leave
 
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -82,7 +82,8 @@ export default function LeaveTable({ leave, period, monthKey, onEarned, onSick }
       <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-300">
         <span className="font-semibold uppercase tracking-wide">Leave year</span>
         <span className="font-medium">{range?.label || "—"}</span>
-        <span>Entitlement: <b>{entE}</b> earned · <b>{entS}</b> sick</span>
+        <span>Office: <b>{entE}</b> earned · <b>{entS}</b> sick /yr</span>
+        <span>Field: <b>{fieldMonthly}</b>/mo (unused → paid out)</span>
         <span>Recording for <b>{monthKey}</b></span>
         <span className="text-emerald-600/80 dark:text-emerald-400/70">
           Approved (paid) leave isn&apos;t deducted — only unpaid absence is
@@ -125,7 +126,10 @@ export default function LeaveTable({ leave, period, monthKey, onEarned, onSick }
                 >
                   <td className="px-3 py-2 text-right tabular-nums text-slate-400">{r.id}</td>
                   <td className="px-3 py-2">
-                    <div className="font-medium text-slate-800 dark:text-slate-100">{r.name}</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-medium text-slate-800 dark:text-slate-100">{r.name}</span>
+                      {r.category === "field" && <Badge tone="blue">field</Badge>}
+                    </div>
                     <div className="text-xs text-slate-400">{r.department}</div>
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums">
@@ -143,10 +147,14 @@ export default function LeaveTable({ leave, period, monthKey, onEarned, onSick }
                     )}
                   </td>
                   <td className="px-3 py-2 text-right">
-                    {numInput(
-                      r.sickMonth,
-                      (e) => onSick(r.id, Math.max(0, Number(e.target.value) || 0)),
-                      r.sickLeft < 0,
+                    {r.category === "field" ? (
+                      <span className="text-slate-300 dark:text-slate-600">—</span>
+                    ) : (
+                      numInput(
+                        r.sickMonth,
+                        (e) => onSick(r.id, Math.max(0, Number(e.target.value) || 0)),
+                        r.sickLeft < 0,
+                      )
                     )}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums">
@@ -158,8 +166,14 @@ export default function LeaveTable({ leave, period, monthKey, onEarned, onSick }
                       <span className="text-slate-300 dark:text-slate-600">0</span>
                     )}
                   </td>
-                  <td className="px-3 py-2">{balCell(r.earnedYTD, entE, r.earnedLeft)}</td>
-                  <td className="px-3 py-2">{balCell(r.sickYTD, entS, r.sickLeft)}</td>
+                  <td className="px-3 py-2">{balCell(r.earnedUsed, r.entE, r.earnedLeft)}</td>
+                  <td className="px-3 py-2">
+                    {r.category === "field" ? (
+                      <div className="text-right text-xs text-slate-300 dark:text-slate-600">—</div>
+                    ) : (
+                      balCell(r.sickYTD, entS, r.sickLeft)
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server"
 import { dbConfigured } from "@/lib/db"
-import { listRecords, getRecord, saveRecord } from "@/lib/dbState"
+import {
+  listRecords,
+  getRecord,
+  saveRecord,
+  isRecordLocked,
+  setRecordLock,
+} from "@/lib/dbState"
+import { currentUser } from "@/lib/serverAuth"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -23,7 +30,10 @@ export async function GET(req) {
   }
 }
 
-// POST /api/records { month, period, totals, rows } -> save/replace a snapshot
+// POST /api/records
+//   { month, action: "lock" | "unlock" }        -> freeze / unfreeze a month
+//   { month, period, totals, rows }              -> save/replace a snapshot
+//                                                   (refused if the month is locked)
 export async function POST(req) {
   if (!dbConfigured()) return noDb()
   try {
@@ -33,6 +43,29 @@ export async function POST(req) {
         { ok: false, error: "month required" },
         { status: 400 },
       )
+
+    // Lock / unlock a finalised month.
+    if (body.action === "lock" || body.action === "unlock") {
+      const user = await currentUser()
+      const res = await setRecordLock(
+        body.month,
+        body.action === "lock",
+        user?.name || user?.uid || "admin",
+      )
+      return NextResponse.json({ ok: true, ...res })
+    }
+
+    // Never overwrite a locked (paid) month.
+    if (await isRecordLocked(body.month))
+      return NextResponse.json(
+        {
+          ok: false,
+          locked: true,
+          error: `${body.month} is locked. Unlock it before saving again.`,
+        },
+        { status: 409 },
+      )
+
     const { month, ...rest } = body
     await saveRecord(month, rest)
     return NextResponse.json({ ok: true })

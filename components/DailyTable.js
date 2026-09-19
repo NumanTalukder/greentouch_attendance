@@ -130,7 +130,7 @@ export default function DailyTable({ records, period, settings }) {
         </div>
       </Toolbar>
 
-      <TableWrap>
+      <TableWrap minWidth={960}>
         <thead className="sticky top-0 z-10 bg-slate-100 text-xs uppercase tracking-wide dark:bg-slate-800">
           <tr>
             <SortTH field="id" label="ID" sort={sort} setSort={setSort} num />
@@ -142,6 +142,9 @@ export default function DailyTable({ records, period, settings }) {
             <SortTH field="otMinutes" label="OT" sort={sort} setSort={setSort} num />
             <th className="px-3 py-2.5 text-left font-semibold text-slate-600 dark:text-slate-300">
               Status
+            </th>
+            <th className="px-3 py-2.5 text-left font-semibold text-slate-600 dark:text-slate-300">
+              Source
             </th>
           </tr>
         </thead>
@@ -192,6 +195,20 @@ export default function DailyTable({ records, period, settings }) {
                     <span className="text-xs text-violet-500" title="Only one punch recorded">
                       1 punch
                     </span>
+                  )}
+                </div>
+              </td>
+              <td className="px-3 py-2">
+                <div className="flex flex-wrap gap-1">
+                  {(r.projects || []).map((p) => (
+                    <Badge key={p} tone="green">{p}</Badge>
+                  ))}
+                  {(r.sources || []).includes("app") &&
+                    (!r.projects || r.projects.length === 0) && (
+                      <Badge tone="green">app</Badge>
+                    )}
+                  {(r.sources || []).includes("machine") && (
+                    <Badge tone="slate">machine</Badge>
                   )}
                 </div>
               </td>

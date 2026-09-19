@@ -164,7 +164,7 @@ export default function EmployeesModal({
                   <Icon.trash className="w-4 h-4" />
                 </button>
               </div>
-              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-5">
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
                 <Field label="Designation">
                   <input
                     value={e.designation || ""}
@@ -178,6 +178,16 @@ export default function EmployeesModal({
                     onChange={(ev) => patch(id, "department", ev.target.value)}
                     className={`${inputCls} w-full`}
                   />
+                </Field>
+                <Field label="Category">
+                  <select
+                    value={e.category || "office"}
+                    onChange={(ev) => patch(id, "category", ev.target.value)}
+                    className={`${inputCls} w-full`}
+                  >
+                    <option value="office">Office (Fri off, 10+7/yr)</option>
+                    <option value="field">Field (no weekend, 3/mo)</option>
+                  </select>
                 </Field>
                 <Field label={`Salary (${currency})`}>
                   <input

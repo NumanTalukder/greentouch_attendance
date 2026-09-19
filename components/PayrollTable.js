@@ -70,6 +70,7 @@ export default function PayrollTable({
     { label: "Bonus", render: (r) => Math.round(r.bonus) },
     { label: "Penalty", render: (r) => Math.round(r.penalty) },
     { label: "Advance", render: (r) => Math.round(r.advance) },
+    { label: "Leave Encashment", render: (r) => Math.round(r.leaveEncashment) },
     { label: "Net Payable", render: (r) => Math.round(r.netPayable) },
   ]
 
@@ -316,8 +317,14 @@ export default function PayrollTable({
               <td className="px-3 py-2 text-right">
                 {adjInput(r.advance, (e) => setAmount(onAdvance, r.id, e.target.value), "penalty")}
               </td>
-              <td className={`${numCell} text-base font-bold text-slate-900 dark:text-white`}>
+              <td
+                className={`${numCell} text-base font-bold text-slate-900 dark:text-white`}
+                title={r.leaveEncashment > 0 ? `Includes ${formatMoney(r.leaveEncashment, c)} unused-leave payout (${r.unusedLeave}d)` : undefined}
+              >
                 {formatMoney(r.netPayable, c)}
+                {r.leaveEncashment > 0 && (
+                  <span className="ml-1 align-top text-[10px] font-medium text-emerald-500">+lv</span>
+                )}
               </td>
               <td className="px-3 py-2 text-right">
                 <button

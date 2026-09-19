@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { parseInputData, inputStats } from "@/lib/parse"
 import {
   buildDailyRecords,
@@ -19,16 +19,20 @@ import {
 } from "@/lib/storage"
 import { STORAGE_KEYS, SAMPLE_DATA } from "@/lib/constants"
 
-import { Icon, Segmented } from "./ui"
+import { Icon } from "./ui"
 import PastePanel from "./PastePanel"
 import Dashboard from "./Dashboard"
 import DailyTable from "./DailyTable"
 import SummaryTable from "./SummaryTable"
 import PayrollTable from "./PayrollTable"
 import LeaveTable from "./LeaveTable"
+import LiveBoard from "./LiveBoard"
 import EmployeesModal from "./modals/EmployeesModal"
 import SettingsModal from "./modals/SettingsModal"
 import RecordsModal from "./modals/RecordsModal"
+import ProjectsModal from "./modals/ProjectsModal"
+import UsersModal from "./modals/UsersModal"
+import ApprovalsModal from "./modals/ApprovalsModal"
 
 export default function AppShell() {
   const { input, setInput } = useInput()
@@ -46,8 +50,42 @@ export default function AppShell() {
   }, [employeesStatus, settingsStatus, adjStatus])
 
   const [tab, setTab] = useState("dashboard")
-  const [modal, setModal] = useState(null) // "employees" | "settings"
+  const [modal, setModal] = useState(null) // "employees" | "settings" | ...
   const [dark, setDark] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [pendingCount, setPendingCount] = useState(0)
+  const [appPunches, setAppPunches] = useState([])
+
+  // Approved app check-ins, as punches merged with the pasted machine data.
+  const loadAppPunches = useCallback(() => {
+    fetch("/api/attendance")
+      .then((r) => r.json())
+      .then((j) => {
+        if (j?.ok) setAppPunches(j.punches || [])
+      })
+      .catch(() => {})
+  }, [])
+  useEffect(() => {
+    loadAppPunches()
+  }, [loadAppPunches])
+
+  // Poll the approvals count so the badge stays live.
+  useEffect(() => {
+    let alive = true
+    const poll = () =>
+      fetch("/api/attendance/pending")
+        .then((r) => r.json())
+        .then((j) => {
+          if (alive && j?.ok) setPendingCount(j.count || 0)
+        })
+        .catch(() => {})
+    poll()
+    const t = setInterval(poll, 60000)
+    return () => {
+      alive = false
+      clearInterval(t)
+    }
+  }, [])
 
   useEffect(() => {
     setDark(document.documentElement.classList.contains("dark"))
@@ -70,8 +108,13 @@ export default function AppShell() {
   }
 
   // ---- engine pipeline (memoized) ----
-  const punches = useMemo(() => parseInputData(input), [input])
-  const stats = useMemo(() => inputStats(punches), [punches])
+  const pastedPunches = useMemo(() => parseInputData(input), [input])
+  const stats = useMemo(() => inputStats(pastedPunches), [pastedPunches])
+  // Engine sees pasted machine data + approved app check-ins together.
+  const punches = useMemo(
+    () => [...pastedPunches, ...appPunches],
+    [pastedPunches, appPunches],
+  )
   const records = useMemo(
     () => buildDailyRecords(punches, settings, employees),
     [punches, settings, employees],
@@ -122,90 +165,126 @@ export default function AppShell() {
 
   const tabs = [
     { value: "dashboard", label: "Dashboard", icon: <Icon.dashboard className="w-4 h-4" /> },
+    { value: "live", label: "Live", icon: <Icon.live className="w-4 h-4" /> },
     { value: "daily", label: "Daily", icon: <Icon.calendar className="w-4 h-4" />, count: records.length || null },
     { value: "summary", label: "Summary", icon: <Icon.users className="w-4 h-4" />, count: dashboard?.totals.activeWithData || null },
     { value: "leave", label: "Leave", icon: <Icon.leaf className="w-4 h-4" /> },
     { value: "payroll", label: "Payroll", icon: <Icon.wallet className="w-4 h-4" /> },
   ]
 
+  const tools = [
+    { value: "approvals", label: "Approvals", icon: <Icon.inbox className="w-4 h-4" />, badge: pendingCount, badgeTone: "amber" },
+    { value: "projects", label: "Projects", icon: <Icon.pin className="w-4 h-4" /> },
+    { value: "records", label: "Records", icon: <Icon.history className="w-4 h-4" /> },
+    { value: "employees", label: "Employees", icon: <Icon.users className="w-4 h-4" />, badge: unknownIds.length, badgeTone: "violet" },
+    { value: "users", label: "Logins", icon: <Icon.key className="w-4 h-4" /> },
+    { value: "settings", label: "Settings", icon: <Icon.settings className="w-4 h-4" /> },
+  ]
+
+  const openTab = (v) => {
+    setTab(v)
+    setSidebarOpen(false)
+  }
+  const openModal = (v) => {
+    setModal(v)
+    setSidebarOpen(false)
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      {/* Top bar */}
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-900/80">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-6">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-sm">
-              <Icon.building className="w-5 h-5" />
-            </div>
-            <div className="leading-tight">
-              <h1 className="text-base font-bold tracking-tight">
-                Green<span className="text-emerald-500">Touch</span>
-              </h1>
-              <p className="text-[11px] text-slate-400">Attendance & Payroll</p>
-            </div>
-          </div>
+      {/* Mobile bar */}
+      <div className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-2.5 md:hidden dark:border-slate-800 dark:bg-slate-900">
+        <button onClick={() => setSidebarOpen(true)} className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
+          <Icon.menu className="w-5 h-5" />
+        </button>
+        <span className="text-sm font-bold">Green<span className="text-emerald-500">Touch</span></span>
+        <CloudStatus status={syncStatus} inline />
+      </div>
 
-          <div className="flex items-center gap-2">
-            <CloudStatus status={syncStatus} />
-            <button
-              onClick={() => setModal("records")}
-              title="Monthly records (cloud)"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-            >
-              <Icon.history className="w-4 h-4" />
-              <span className="hidden md:inline">Records</span>
-            </button>
-            <button
-              onClick={() => setModal("employees")}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-            >
-              <Icon.users className="w-4 h-4" />
-              <span className="hidden sm:inline">Employees</span>
-              {unknownIds.length > 0 && (
-                <span className="rounded-full bg-violet-500 px-1.5 text-xs text-white">
-                  {unknownIds.length}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => setModal("settings")}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-            >
-              <Icon.settings className="w-4 h-4" />
-              <span className="hidden sm:inline">Settings</span>
-            </button>
+      {/* Backdrop (mobile) */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-40 bg-slate-900/40 md:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-white transition-transform duration-200 dark:border-slate-800 dark:bg-slate-900 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        } md:translate-x-0`}
+      >
+        <div className="flex items-center gap-2.5 border-b border-slate-100 px-4 py-4 dark:border-slate-800">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-sm">
+            <Icon.building className="w-5 h-5" />
+          </div>
+          <div className="leading-tight">
+            <h1 className="text-base font-bold tracking-tight">
+              Green<span className="text-emerald-500">Touch</span>
+            </h1>
+            <p className="text-[11px] text-slate-400">Attendance & Payroll</p>
+          </div>
+        </div>
+
+        <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
+          <div className="space-y-1">
+            {tabs.map((t) => (
+              <SideItem
+                key={t.value}
+                icon={t.icon}
+                label={t.label}
+                active={tab === t.value}
+                count={t.count}
+                onClick={() => openTab(t.value)}
+              />
+            ))}
+          </div>
+          <div className="space-y-1">
+            <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Manage
+            </p>
+            {tools.map((t) => (
+              <SideItem
+                key={t.value}
+                icon={t.icon}
+                label={t.label}
+                onClick={() => openModal(t.value)}
+                badge={t.badge}
+                badgeTone={t.badgeTone}
+              />
+            ))}
+          </div>
+        </nav>
+
+        <div className="space-y-2 border-t border-slate-100 p-3 dark:border-slate-800">
+          <div className="flex items-center justify-between px-1">
+            <CloudStatus status={syncStatus} inline />
             <button
               onClick={toggleTheme}
               title="Toggle theme"
-              className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+              className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
             >
               {dark ? <Icon.sun className="w-4 h-4" /> : <Icon.moon className="w-4 h-4" />}
             </button>
-            <button
-              onClick={logout}
-              title="Log out"
-              className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-rose-50 hover:text-rose-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-rose-900/20"
-            >
-              <Icon.logout className="w-4 h-4" />
-            </button>
           </div>
+          <button
+            onClick={logout}
+            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-rose-50 hover:text-rose-600 dark:text-slate-300 dark:hover:bg-rose-900/20"
+          >
+            <Icon.logout className="w-4 h-4" /> Log out
+          </button>
         </div>
-      </header>
+      </aside>
 
-      <main className="mx-auto max-w-7xl space-y-4 px-4 py-5 md:px-6">
-        <PastePanel
-          input={input}
-          setInput={setInput}
-          stats={stats}
-          onSample={() => setInput(SAMPLE_DATA)}
-          onClear={() => setInput("")}
-        />
+      {/* Main */}
+      <div className="md:pl-64">
+        <main className="mx-auto max-w-6xl space-y-4 px-4 py-5 md:px-8">
+          <PastePanel
+            input={input}
+            setInput={setInput}
+            stats={stats}
+            onSample={() => setInput(SAMPLE_DATA)}
+            onClear={() => setInput("")}
+          />
 
-        <div className="flex items-center justify-between">
-          <Segmented options={tabs} value={tab} onChange={setTab} />
-        </div>
-
-        <div>
           {tab === "dashboard" && (
             <Dashboard
               dashboard={dashboard}
@@ -214,6 +293,13 @@ export default function AppShell() {
               settings={settings}
               unknownIds={unknownIds}
               onManage={() => setModal("employees")}
+            />
+          )}
+          {tab === "live" && (
+            <LiveBoard
+              period={period}
+              employees={employees}
+              settings={settings}
             />
           )}
           {tab === "daily" && (
@@ -243,15 +329,15 @@ export default function AppShell() {
               onAdvance={setAdvance}
             />
           )}
-        </div>
 
-        <footer className="pt-6 pb-2 text-center text-xs text-slate-400">
-          {syncStatus === "offline"
-            ? "Saved locally · cloud offline"
-            : "Synced to cloud · cached locally"}{" "}
-          · {records.length} day-records processed
-        </footer>
-      </main>
+          <footer className="pt-6 pb-2 text-center text-xs text-slate-400">
+            {syncStatus === "offline"
+              ? "Saved locally · cloud offline"
+              : "Synced to cloud · cached locally"}{" "}
+            · {records.length} day-records processed
+          </footer>
+        </main>
+      </div>
 
       {modal === "employees" && (
         <EmployeesModal
@@ -278,12 +364,64 @@ export default function AppShell() {
           onClose={() => setModal(null)}
         />
       )}
+      {modal === "projects" && (
+        <ProjectsModal onClose={() => setModal(null)} />
+      )}
+      {modal === "users" && (
+        <UsersModal employees={employees} setEmployees={setEmployees} onClose={() => setModal(null)} />
+      )}
+      {modal === "approvals" && (
+        <ApprovalsModal
+          onChange={(n) => {
+            setPendingCount(n)
+            loadAppPunches() // a just-approved session should appear in the tables
+          }}
+          onClose={() => setModal(null)}
+        />
+      )}
     </div>
   )
 }
 
+// Sidebar / mobile-bar navigation button.
+function SideItem({ icon, label, active, onClick, count, badge, badgeTone }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
+        active
+          ? "bg-emerald-500 text-white shadow-sm"
+          : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+      }`}
+    >
+      <span className={active ? "" : "text-slate-400"}>{icon}</span>
+      <span className="flex-1 text-left">{label}</span>
+      {count > 0 && (
+        <span
+          className={`rounded-full px-1.5 text-xs ${
+            active
+              ? "bg-white/25"
+              : "bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+          }`}
+        >
+          {count}
+        </span>
+      )}
+      {badge > 0 && (
+        <span
+          className={`rounded-full px-1.5 text-xs font-semibold text-white ${
+            badgeTone === "violet" ? "bg-violet-500" : "bg-amber-500"
+          }`}
+        >
+          {badge}
+        </span>
+      )}
+    </button>
+  )
+}
+
 // Small pill showing whether data is syncing to MongoDB.
-function CloudStatus({ status }) {
+function CloudStatus({ status, inline }) {
   const map = {
     synced: { tone: "text-emerald-600 dark:text-emerald-400", icon: <Icon.cloud className="w-4 h-4" />, label: "Synced" },
     saving: { tone: "text-amber-600 dark:text-amber-400", icon: <Icon.cloud className="w-4 h-4 animate-pulse" />, label: "Saving…" },
@@ -294,7 +432,9 @@ function CloudStatus({ status }) {
   return (
     <span
       title={status === "offline" ? "Cloud unreachable — saved locally" : "Cloud sync"}
-      className={`hidden items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium sm:inline-flex dark:border-slate-700 ${s.tone}`}
+      className={`items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium ${s.tone} ${
+        inline ? "inline-flex" : "hidden sm:inline-flex"
+      }`}
     >
       {s.icon}
       {s.label}

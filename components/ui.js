@@ -148,6 +148,22 @@ export const Icon = {
       <path d="M17.5 19a4.5 4.5 0 0 0 .5-8.97A6 6 0 0 0 6.3 9.3 4 4 0 0 0 7 17h10.5z" />,
       p,
     ),
+  lock: (p) =>
+    ic(
+      <>
+        <rect x="3" y="11" width="18" height="11" rx="2" />
+        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+      </>,
+      p,
+    ),
+  unlock: (p) =>
+    ic(
+      <>
+        <rect x="3" y="11" width="18" height="11" rx="2" />
+        <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+      </>,
+      p,
+    ),
   cloudOff: (p) =>
     ic(
       <>
@@ -177,6 +193,39 @@ export const Icon = {
       </>,
       p,
     ),
+  pin: (p) =>
+    ic(
+      <>
+        <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" />
+        <circle cx="12" cy="10" r="2.5" />
+      </>,
+      p,
+    ),
+  key: (p) =>
+    ic(
+      <>
+        <circle cx="7.5" cy="15.5" r="4.5" />
+        <path d="M10.7 12.3 21 2M16 7l3 3" />
+      </>,
+      p,
+    ),
+  inbox: (p) =>
+    ic(
+      <>
+        <path d="M22 12h-6l-2 3h-4l-2-3H2" />
+        <path d="M5.5 5h13l3.5 7v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-6z" />
+      </>,
+      p,
+    ),
+  live: (p) =>
+    ic(
+      <>
+        <circle cx="12" cy="12" r="2" />
+        <path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 4.9a10 10 0 0 1 0 14.2M5 19.1a10 10 0 0 1 0-14.2" />
+      </>,
+      p,
+    ),
+  menu: (p) => ic(<path d="M3 6h18M3 12h18M3 18h18" />, p),
 }
 
 const TONES = {

@@ -99,8 +99,18 @@ AUTH_SECRET="<openssl rand -hex 32>"       # signs the session cookie
 A Next.js **middleware** (`middleware.js`) enforces this on every page *and*
 every `/api/*` route: no valid session → pages redirect to `/login`, API calls
 get **401**. So the payroll data can't be read by hitting the API directly.
-Login sets a signed, HTTP-only cookie (7-day session); the top-bar logout button
-clears it. Change `AUTH_SECRET` to force everyone to re-login. On Vercel, set
+Login sets a signed, HTTP-only cookie (7-day session) carrying the user's role;
+the top-bar logout button clears it. Change `AUTH_SECRET` to force everyone to
+re-login.
+
+**Accounts & roles.** Beyond the owner (blank username + `APP_PASSWORD`, always
+admin), you create **logins** in the header → *Logins*: each has a username,
+bcrypt-hashed password, a role (**admin** or **employee**), and an optional link
+to an employee record. Middleware splits two zones — **employees** are confined
+to `/app` (the phone check-in app) and `/api/me`; **admins** reach the full
+office app. Manage these in the `users` collection.
+
+On Vercel, set
 `APP_PASSWORD` and `AUTH_SECRET` as environment variables too. Use a dedicated, least-privilege Atlas user,
 and add your server's IP (or `0.0.0.0/0` for testing) under Atlas → Network
 Access. On Vercel, set `MONGODB_URI` in Project → Settings → Environment
@@ -114,8 +124,26 @@ Collections created automatically:
 | `employees` | one document per employee (`_id` = id): name, salary, department… |
 | `state` | singletons `settings` and `adjustments` (per-month OT/penalty/bonus) |
 | `records` | one document per finalised month (`_id` = `YYYY-MM`): totals + rows |
+| `projects` | one document per work site: name, geofence (lat/lng/radius), archived |
+| `users` | one document per login (`_id` = username): role, bcrypt hash, employeeId |
+| `attendance` | one document per app check-in→out session: project, server times, GPS, status |
 
 Save a month's snapshot from **Records** in the top bar.
+
+## Employee app & geofenced check-in (`/app`)
+
+Employees (logins with the **employee** role) sign in and land on `/app` — a
+mobile-first screen where they pick an active **project** and **Check in**. The
+phone sends its GPS; the **server** stamps the time and measures the distance to
+the project's geofence:
+
+- **Inside the radius** → approved instantly.
+- **Outside, or GPS unavailable** → they file an **off-site (field-work) claim**
+  with a reason; it's saved as **pending** and lands in the admin **Approvals**
+  inbox (top bar) with the location and reason to approve or reject.
+
+Only **approved** sessions will count toward payroll. Check-out (and "check out to
+switch project") close the session; the day's sessions show at the bottom.
 
 ## Develop
 
