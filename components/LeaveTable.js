@@ -5,7 +5,7 @@ import { Badge, Icon, SortTH, Empty } from "./ui"
 import { Toolbar, TableWrap } from "./DailyTable"
 import { exportCSV } from "@/lib/export"
 
-export default function LeaveTable({ leave, period, monthKey, onEarned, onSick }) {
+export default function LeaveTable({ leave, period, monthKey, onEarned, onSick, onMonthly }) {
   const [search, setSearch] = useState("")
   const [sort, setSort] = useState({ field: "id", dir: "asc" })
 
@@ -32,6 +32,8 @@ export default function LeaveTable({ leave, period, monthKey, onEarned, onSick }
     { label: "Absent", render: (r) => r.absentDays },
     { label: "Earned taken (month)", render: (r) => r.earnedMonth },
     { label: "Sick taken (month)", render: (r) => r.sickMonth },
+    { label: "Monthly taken (field)", render: (r) => (r.category === "field" ? r.monthUsed : "") },
+    { label: "Monthly left (paid out)", render: (r) => (r.category === "field" ? r.monthLeft : "") },
     { label: "Unpaid absent", render: (r) => r.unpaidAbsent },
     { label: "Earned YTD", render: (r) => r.earnedYTD },
     { label: "Earned left", render: (r) => r.earnedLeft },
@@ -82,8 +84,8 @@ export default function LeaveTable({ leave, period, monthKey, onEarned, onSick }
       <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-300">
         <span className="font-semibold uppercase tracking-wide">Leave year</span>
         <span className="font-medium">{range?.label || "—"}</span>
-        <span>Office: <b>{entE}</b> earned · <b>{entS}</b> sick /yr</span>
-        <span>Field: <b>{fieldMonthly}</b>/mo (unused → paid out)</span>
+        <span>Everyone: <b>{entE}</b> earned · <b>{entS}</b> sick /yr</span>
+        <span>Field staff also: <b>{fieldMonthly}</b>/month (unused → paid out)</span>
         <span>Recording for <b>{monthKey}</b></span>
         <span className="text-emerald-600/80 dark:text-emerald-400/70">
           Approved (paid) leave isn&apos;t deducted — only unpaid absence is
@@ -105,7 +107,7 @@ export default function LeaveTable({ leave, period, monthKey, onEarned, onSick }
             onPrint={() => window.print()}
             count={rows.length}
           />
-          <TableWrap minWidth={920}>
+          <TableWrap minWidth={1100}>
             <thead className="sticky top-0 z-10 bg-slate-100 text-xs uppercase tracking-wide dark:bg-slate-800">
               <tr>
                 <SortTH field="id" label="ID" sort={sort} setSort={setSort} num />
@@ -113,9 +115,11 @@ export default function LeaveTable({ leave, period, monthKey, onEarned, onSick }
                 <SortTH field="absentDays" label="Absent" sort={sort} setSort={setSort} num />
                 <th className="px-3 py-2.5 text-right font-semibold text-emerald-600 dark:text-emerald-400">Earned taken</th>
                 <th className="px-3 py-2.5 text-right font-semibold text-sky-600 dark:text-sky-400">Sick taken</th>
+                <th className="px-3 py-2.5 text-right font-semibold text-violet-600 dark:text-violet-400">Monthly taken</th>
                 <SortTH field="unpaidAbsent" label="Unpaid absent" sort={sort} setSort={setSort} num />
                 <th className="px-3 py-2.5 text-right font-semibold text-slate-600 dark:text-slate-300">Earned balance</th>
                 <th className="px-3 py-2.5 text-right font-semibold text-slate-600 dark:text-slate-300">Sick balance</th>
+                <th className="px-3 py-2.5 text-right font-semibold text-slate-600 dark:text-slate-300">Monthly (field)</th>
               </tr>
             </thead>
             <tbody>
@@ -147,14 +151,21 @@ export default function LeaveTable({ leave, period, monthKey, onEarned, onSick }
                     )}
                   </td>
                   <td className="px-3 py-2 text-right">
+                    {numInput(
+                      r.sickMonth,
+                      (e) => onSick(r.id, Math.max(0, Number(e.target.value) || 0)),
+                      r.sickLeft < 0,
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-right">
                     {r.category === "field" ? (
-                      <span className="text-slate-300 dark:text-slate-600">—</span>
-                    ) : (
                       numInput(
-                        r.sickMonth,
-                        (e) => onSick(r.id, Math.max(0, Number(e.target.value) || 0)),
-                        r.sickLeft < 0,
+                        r.monthUsed,
+                        (e) => onMonthly(r.id, Math.max(0, Number(e.target.value) || 0)),
+                        r.monthUsed > r.monthEnt,
                       )
+                    ) : (
+                      <span className="text-slate-300 dark:text-slate-600">—</span>
                     )}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums">
@@ -167,11 +178,19 @@ export default function LeaveTable({ leave, period, monthKey, onEarned, onSick }
                     )}
                   </td>
                   <td className="px-3 py-2">{balCell(r.earnedUsed, r.entE, r.earnedLeft)}</td>
+                  <td className="px-3 py-2">{balCell(r.sickYTD, entS, r.sickLeft)}</td>
                   <td className="px-3 py-2">
                     {r.category === "field" ? (
-                      <div className="text-right text-xs text-slate-300 dark:text-slate-600">—</div>
+                      <div className="flex items-center justify-end gap-1.5">
+                        {balCell(r.monthUsed, r.monthEnt, r.monthLeft)}
+                        {r.monthLeft > 0 && (
+                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400" title="Unused monthly days are paid out at one day's salary each">
+                            paid out
+                          </span>
+                        )}
+                      </div>
                     ) : (
-                      balCell(r.sickYTD, entS, r.sickLeft)
+                      <div className="text-right text-xs text-slate-300 dark:text-slate-600">—</div>
                     )}
                   </td>
                 </tr>

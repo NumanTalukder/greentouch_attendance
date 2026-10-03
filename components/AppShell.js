@@ -16,8 +16,9 @@ import {
   useSettings,
   useInput,
   useAdjustments,
+  useAdvances,
 } from "@/lib/storage"
-import { STORAGE_KEYS, SAMPLE_DATA } from "@/lib/constants"
+import { STORAGE_KEYS } from "@/lib/constants"
 
 import { Icon } from "./ui"
 import PastePanel from "./PastePanel"
@@ -27,6 +28,9 @@ import SummaryTable from "./SummaryTable"
 import PayrollTable from "./PayrollTable"
 import LeaveTable from "./LeaveTable"
 import LiveBoard from "./LiveBoard"
+import SalarySheet from "./SalarySheet"
+import { attributePunches, advanceDue } from "@/lib/salaryInput"
+import { monthInfo } from "@/lib/salaryCalc"
 import EmployeesModal from "./modals/EmployeesModal"
 import SettingsModal from "./modals/SettingsModal"
 import RecordsModal from "./modals/RecordsModal"
@@ -39,6 +43,7 @@ export default function AppShell() {
   const { settings, setSettings, status: settingsStatus } = useSettings()
   const { employees, setEmployees, status: employeesStatus } = useEmployees()
   const { adjustments, updateMonth, status: adjStatus } = useAdjustments()
+  const { advances, setAdvances } = useAdvances()
 
   // Combined cloud sync status across all synced stores.
   const syncStatus = useMemo(() => {
@@ -107,13 +112,121 @@ export default function AppShell() {
     } catch {}
   }
 
+  // ---- machine data: stored in the cloud, one document per month ----
+  const [month, setMonthState] = useState("")
+  const [machineMonths, setMachineMonths] = useState([])
+  const [machineCache, setMachineCache] = useState({}) // month → punches (raw machine IDs)
+  const [machineLoading, setMachineLoading] = useState(false)
+  const setMonth = useCallback((m) => {
+    setMonthState(m)
+    try {
+      localStorage.setItem(STORAGE_KEYS.viewMonth, m)
+    } catch {}
+  }, [])
+
+  const loadMachineMonths = useCallback(async () => {
+    try {
+      const j = await (await fetch("/api/machine")).json()
+      if (j?.ok) {
+        setMachineMonths(j.months || [])
+        return j.months || []
+      }
+    } catch {}
+    return []
+  }, [])
+
+  // Start on: last month viewed → latest month with machine data → this month.
+  useEffect(() => {
+    ;(async () => {
+      const months = await loadMachineMonths()
+      let saved = ""
+      try {
+        saved = localStorage.getItem(STORAGE_KEYS.viewMonth) || ""
+      } catch {}
+      const now = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" }).slice(0, 7)
+      setMonthState((cur) => cur || saved || months[0]?.month || now)
+    })()
+  }, [loadMachineMonths])
+
+  const loadMachineMonth = useCallback(async (m) => {
+    if (!m) return
+    setMachineLoading(true)
+    try {
+      const j = await (await fetch(`/api/machine?month=${m}`)).json()
+      if (j?.ok) setMachineCache((c) => ({ ...c, [m]: j.data || [] }))
+    } catch {}
+    setMachineLoading(false)
+  }, [])
+  useEffect(() => {
+    if (month && machineCache[month] === undefined) loadMachineMonth(month)
+  }, [month, machineCache, loadMachineMonth])
+  // Another PC may have imported meanwhile — refresh when this tab regains focus.
+  useEffect(() => {
+    const onFocus = () => {
+      if (month) loadMachineMonth(month)
+      loadMachineMonths()
+    }
+    window.addEventListener("focus", onFocus)
+    return () => window.removeEventListener("focus", onFocus)
+  }, [month, loadMachineMonth, loadMachineMonths])
+
+  // Import draft: pasted text stays in this browser until "Save to cloud".
+  const draftPunches = useMemo(() => parseInputData(input), [input])
+  const draftStats = useMemo(() => inputStats(draftPunches), [draftPunches])
+  const [importNote, setImportNote] = useState(null) // { busy } | { tone, text }
+  const niceMonth = (m) => monthInfo(m).label.replace("-", " ")
+  const saveDraft = async () => {
+    if (!draftPunches.length) return
+    setImportNote({ busy: true })
+    try {
+      const r = await fetch("/api/machine", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ punches: draftPunches.map(({ id, date, time }) => ({ id, date, time })) }),
+      })
+      if (r.status === 401) return (window.location.href = "/login")
+      const j = await r.json()
+      if (!j?.ok) throw new Error(j?.error || "server error")
+      const saved = [...(j.saved || [])].sort((a, b) => b.month.localeCompare(a.month))
+      setMachineCache((c) => {
+        const n = { ...c }
+        for (const x of saved) delete n[x.month]
+        return n
+      })
+      await loadMachineMonths()
+      const parts = saved.map((x) => `${niceMonth(x.month)}: ${x.added} new punch${x.added === 1 ? "" : "es"} (${x.total} total)`)
+      if (j.locked?.length) parts.push(`${j.locked.map(niceMonth).join(", ")} is locked in Records, so it was not changed`)
+      setImportNote({ tone: j.locked?.length ? "warn" : "ok", text: `Saved to cloud · ${parts.join(" · ")}` })
+      if (!j.locked?.length) setInput("")
+      if (saved[0]) setMonth(saved[0].month)
+    } catch (e) {
+      setImportNote({ tone: "err", text: `Could not save to cloud (${e.message}). The data is still here, try again.` })
+    }
+  }
+  const deleteMachineMonth = async (m) => {
+    if (!confirm(`Delete ALL machine data for ${niceMonth(m)}? Everyone will lose this month's punches until it is imported again.`)) return
+    try {
+      const j = await (await fetch(`/api/machine?month=${m}`, { method: "DELETE" })).json()
+      if (!j?.ok) throw new Error(j?.error || "server error")
+      setMachineCache((c) => ({ ...c, [m]: [] }))
+      await loadMachineMonths()
+      setImportNote({ tone: "ok", text: `Deleted machine data for ${niceMonth(m)}.` })
+    } catch (e) {
+      setImportNote({ tone: "err", text: `Could not delete: ${e.message}` })
+    }
+  }
+
   // ---- engine pipeline (memoized) ----
-  const pastedPunches = useMemo(() => parseInputData(input), [input])
-  const stats = useMemo(() => inputStats(pastedPunches), [pastedPunches])
-  // Engine sees pasted machine data + approved app check-ins together.
+  // The selected month's machine punches (machine IDs → employees via
+  // machineId) + that month's approved app check-ins.
+  const machinePunches = useMemo(
+    () => attributePunches(machineCache[month] || [], employees),
+    [machineCache, month, employees],
+  )
+  const stats = useMemo(() => inputStats(machinePunches), [machinePunches])
   const punches = useMemo(
-    () => [...pastedPunches, ...appPunches],
-    [pastedPunches, appPunches],
+    () => [...machinePunches, ...appPunches.filter((p) => month && String(p.date).startsWith(month))],
+    [machinePunches, appPunches, month],
   )
   const records = useMemo(
     () => buildDailyRecords(punches, settings, employees),
@@ -128,13 +241,19 @@ export default function AppShell() {
     () => buildDashboard(records, summary, period),
     [records, summary, period],
   )
-  // Manual adjustments (approved OT, penalties, bonuses) are stored per month;
-  // derive the key from the pasted period.
-  const monthKey = period.from ? period.from.slice(0, 7) : ""
-  const adjForPeriod = useMemo(
-    () => adjustments[monthKey] || { ot: {}, penalty: {}, bonus: {} },
-    [adjustments, monthKey],
-  )
+  // Monthly adjustments are keyed by the month being viewed.
+  const monthKey = month
+  // Advances come from the ledger unless a value was typed for the month.
+  const adjForPeriod = useMemo(() => {
+    const m = adjustments[monthKey] || { ot: {}, penalty: {}, bonus: {} }
+    const advance = { ...(m.advance || {}) }
+    for (const key of Object.keys(employees)) {
+      if (Object.prototype.hasOwnProperty.call(advance, key)) continue
+      const due = advanceDue(advances, key, monthKey)
+      if (due) advance[key] = due
+    }
+    return { ...m, advance }
+  }, [adjustments, monthKey, advances, employees])
   const setOt = (id, hours) =>
     updateMonth(monthKey, "ot", (m) => ({ ...m, [id]: hours }))
   const approveAllOt = (patch) =>
@@ -149,6 +268,8 @@ export default function AppShell() {
     updateMonth(monthKey, "leaveEarned", (m) => ({ ...m, [id]: days }))
   const setLeaveSick = (id, days) =>
     updateMonth(monthKey, "leaveSick", (m) => ({ ...m, [id]: days }))
+  const setLeaveMonthly = (id, days) =>
+    updateMonth(monthKey, "leaveMonthly", (m) => ({ ...m, [id]: days }))
 
   const payroll = useMemo(
     () => buildPayroll(summary, settings, period, adjForPeriod),
@@ -170,6 +291,7 @@ export default function AppShell() {
     { value: "summary", label: "Summary", icon: <Icon.users className="w-4 h-4" />, count: dashboard?.totals.activeWithData || null },
     { value: "leave", label: "Leave", icon: <Icon.leaf className="w-4 h-4" /> },
     { value: "payroll", label: "Payroll", icon: <Icon.wallet className="w-4 h-4" /> },
+    { value: "salary", label: "Salary sheet", icon: <Icon.sheet className="w-4 h-4" /> },
   ]
 
   const tools = [
@@ -278,11 +400,18 @@ export default function AppShell() {
       <div className="md:pl-64">
         <main className="mx-auto max-w-6xl space-y-4 px-4 py-5 md:px-8">
           <PastePanel
+            month={month}
+            setMonth={setMonth}
+            months={machineMonths}
+            stats={stats}
+            loading={machineLoading || machineCache[month] === undefined}
             input={input}
             setInput={setInput}
-            stats={stats}
-            onSample={() => setInput(SAMPLE_DATA)}
-            onClear={() => setInput("")}
+            draftStats={draftStats}
+            onSave={saveDraft}
+            note={importNote}
+            onDismissNote={() => setImportNote(null)}
+            onDeleteMonth={deleteMachineMonth}
           />
 
           {tab === "dashboard" && (
@@ -315,6 +444,24 @@ export default function AppShell() {
               monthKey={monthKey}
               onEarned={setLeaveEarned}
               onSick={setLeaveSick}
+              onMonthly={setLeaveMonthly}
+            />
+          )}
+          {tab === "salary" && month && (
+            <SalarySheet
+              employees={employees}
+              setEmployees={setEmployees}
+              settings={settings}
+              adjustments={adjustments}
+              updateMonth={updateMonth}
+              advances={advances}
+              setAdvances={setAdvances}
+              records={records}
+              coverage={period /* same data window as the Payroll page */}
+              month={month}
+              setMonth={setMonth}
+              currency={settings.currency}
+              onOpenEmployees={() => openModal("employees")}
             />
           )}
           {tab === "payroll" && (

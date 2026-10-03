@@ -148,6 +148,14 @@ export const Icon = {
       <path d="M17.5 19a4.5 4.5 0 0 0 .5-8.97A6 6 0 0 0 6.3 9.3 4 4 0 0 0 7 17h10.5z" />,
       p,
     ),
+  sheet: (p) =>
+    ic(
+      <>
+        <rect x="3" y="4" width="18" height="16" rx="2" />
+        <path d="M3 9h18M3 14h18M9 9v11M15 9v11" />
+      </>,
+      p,
+    ),
   lock: (p) =>
     ic(
       <>

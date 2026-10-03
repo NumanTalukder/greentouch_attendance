@@ -141,6 +141,14 @@ export default function EmployeesModal({
             >
               <div className="flex items-center gap-2">
                 <Badge tone="slate">#{id}</Badge>
+                {e.payGroup && (
+                  <Badge tone={e.payGroup === "director" ? "violet" : "green"}>
+                    {e.payGroup === "director" ? "Director" : "Staff"}
+                  </Badge>
+                )}
+                {e.onMachine && (
+                  <Badge tone="blue">machine{e.machineId ? ` ${e.machineId}` : ""}</Badge>
+                )}
                 <input
                   value={e.name}
                   onChange={(ev) => patch(id, "name", ev.target.value)}
@@ -186,7 +194,7 @@ export default function EmployeesModal({
                     className={`${inputCls} w-full`}
                   >
                     <option value="office">Office (Fri off, 10+7/yr)</option>
-                    <option value="field">Field (no weekend, 3/mo)</option>
+                    <option value="field">Field (no weekend, 10+7/yr + 3/mo)</option>
                   </select>
                 </Field>
                 <Field label={`Salary (${currency})`}>
@@ -210,6 +218,67 @@ export default function EmployeesModal({
                     value={e.phone || ""}
                     onChange={(ev) => patch(id, "phone", ev.target.value)}
                     className={`${inputCls} w-full`}
+                  />
+                </Field>
+              </div>
+              {/* Salary sheet + attendance source */}
+              <div className="mt-2 grid grid-cols-2 gap-2 rounded-md bg-slate-50 p-2 sm:grid-cols-6 dark:bg-slate-900/60">
+                <Field label="Pay group">
+                  <select
+                    value={e.payGroup || ""}
+                    onChange={(ev) => patch(id, "payGroup", ev.target.value)}
+                    className={`${inputCls} w-full`}
+                  >
+                    <option value="">Not on sheet</option>
+                    <option value="staff">Staff</option>
+                    <option value="director">Director</option>
+                  </select>
+                </Field>
+                <Field label="S.L order">
+                  <input
+                    type="number"
+                    value={e.sheetOrder || ""}
+                    onChange={(ev) => patch(id, "sheetOrder", Number(ev.target.value))}
+                    className={`${inputCls} w-full tabular-nums`}
+                  />
+                </Field>
+                <Field label="Attendance">
+                  <label className="flex h-[30px] cursor-pointer items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={!!e.onMachine}
+                      onChange={(ev) => patch(id, "onMachine", ev.target.checked)}
+                      className="accent-emerald-500"
+                    />
+                    On machine
+                  </label>
+                  <span className="mt-0.5 block text-[10px] leading-tight text-slate-400">
+                    Ticked: pay uses attendance (absent, late, half day, OT)
+                  </span>
+                </Field>
+                <Field label="Machine ID">
+                  <input
+                    value={e.machineId || ""}
+                    disabled={!e.onMachine}
+                    placeholder={e.onMachine ? "e.g. 12345" : "—"}
+                    onChange={(ev) => patch(id, "machineId", ev.target.value.replace(/\D/g, ""))}
+                    className={`${inputCls} w-full tabular-nums disabled:opacity-50`}
+                  />
+                </Field>
+                <Field label="No. of increments">
+                  <input
+                    type="number"
+                    value={e.incCount || ""}
+                    onChange={(ev) => patch(id, "incCount", Number(ev.target.value))}
+                    className={`${inputCls} w-full tabular-nums`}
+                  />
+                </Field>
+                <Field label="Special inc.">
+                  <input
+                    type="number"
+                    value={e.specialInc || ""}
+                    onChange={(ev) => patch(id, "specialInc", Number(ev.target.value))}
+                    className={`${inputCls} w-full tabular-nums`}
                   />
                 </Field>
               </div>

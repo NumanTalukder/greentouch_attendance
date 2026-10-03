@@ -416,14 +416,11 @@ export default function EmployeeApp() {
                 <Stat label={t("overtime")} value={`${my.stats.otHours}${t("hrs")}`} tone="text-sky-600 dark:text-sky-400" />
               </div>
               <div className="mt-3 space-y-1.5 text-sm">
-                {my.category === "field" ? (
+                {my.category === "field" && (
                   <LeaveRow label={t("monthlyLeaveLeft")} value={`${my.leave.monthLeft} / ${my.leave.fieldMonthly}`} />
-                ) : (
-                  <>
-                    <LeaveRow label={t("earnedLeaveLeft")} value={`${my.leave.earnedLeft} / ${my.leave.entE}`} />
-                    <LeaveRow label={t("sickLeaveLeft")} value={`${my.leave.sickLeft} / ${my.leave.entS}`} />
-                  </>
                 )}
+                <LeaveRow label={t("earnedLeaveLeft")} value={`${my.leave.earnedLeft} / ${my.leave.entE}`} />
+                <LeaveRow label={t("sickLeaveLeft")} value={`${my.leave.sickLeft} / ${my.leave.entS}`} />
               </div>
             </>
           ) : (

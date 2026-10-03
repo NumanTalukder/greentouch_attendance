@@ -11,6 +11,14 @@ const inp =
 export default function SettingsModal({ settings, setSettings, onClose }) {
   const [draft, setDraft] = useState(settings)
   const set = (key, value) => setDraft((d) => ({ ...d, [key]: value }))
+  const company = { ...DEFAULT_SETTINGS.company, ...(draft.company || {}) }
+  const split = { ...DEFAULT_SETTINGS.salarySplit, ...(draft.salarySplit || {}) }
+  const setCompany = (k, v) => set("company", { ...company, [k]: v })
+  const setSplit = (k, pct) =>
+    set("salarySplit", { ...split, [k]: (Number(pct) || 0) / 100 })
+  const splitTotal = Math.round(
+    (split.basic + split.house + split.medical + split.conveyance) * 1000,
+  ) / 10
 
   const toggleWeekend = (day) =>
     setDraft((d) => ({
@@ -128,6 +136,7 @@ export default function SettingsModal({ settings, setSettings, onClose }) {
             <option value="working">Working days in period</option>
             <option value="fixed26">Fixed 26 days</option>
             <option value="fixed30">Fixed 30 days</option>
+            <option value="calendar">Calendar days in month (28–31)</option>
           </select>
         </Field>
         <Field label="Overtime method" hint="How the OT rate is set">
@@ -187,6 +196,28 @@ export default function SettingsModal({ settings, setSettings, onClose }) {
             ))}
           </select>
         </Field>
+      </Section>
+
+      <Section title="Salary sheet (accounts workbook)">
+        <Field label="Company name">
+          <input value={company.name} onChange={(e) => setCompany("name", e.target.value)} className={`${inp} w-full`} />
+        </Field>
+        <Field label="Address line 1">
+          <input value={company.address1} onChange={(e) => setCompany("address1", e.target.value)} className={`${inp} w-full`} />
+        </Field>
+        <Field label="Address line 2">
+          <input value={company.address2} onChange={(e) => setCompany("address2", e.target.value)} className={`${inp} w-full`} />
+        </Field>
+        {[
+          ["basic", "Basic %"],
+          ["house", "House rent %"],
+          ["medical", "Medical %"],
+          ["conveyance", "Conveyance %"],
+        ].map(([k, label]) => (
+          <Field key={k} label={label} hint={k === "conveyance" ? `Split of gross — total ${splitTotal}%${splitTotal === 100 ? "" : " (should be 100%)"}` : undefined}>
+            <input type="number" min={0} max={100} step="0.5" value={Math.round(split[k] * 1000) / 10} onChange={(e) => setSplit(k, e.target.value)} className={`${inp} w-full`} />
+          </Field>
+        ))}
       </Section>
 
       <Section title="Holidays" cols={1}>
