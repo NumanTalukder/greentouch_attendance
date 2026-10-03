@@ -34,7 +34,7 @@ export async function PUT(req) {
 // editing at once never overwrite each other's numbers.
 const FIELDS = new Set([
   "ot", "penalty", "bonus", "advance", "leaveEarned", "leaveSick", "leaveMonthly",
-  "ait", "otAdjust", "days", "otDays", "lateCut",
+  "ait", "otAdjust", "days", "otDays", "lateCut", "corrections", "holidayWork",
 ])
 export async function PATCH(req) {
   if (!dbConfigured()) return noDb()

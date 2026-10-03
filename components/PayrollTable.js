@@ -59,6 +59,9 @@ export default function PayrollTable({
     { label: "Unpaid Absent", render: (r) => r.unpaidAbsentDays },
     { label: "Late", render: (r) => r.lateDays },
     { label: "Half Day", render: (r) => r.halfDays },
+    { label: "Left Early (half day)", render: (r) => r.earlyHalfDays || 0 },
+    { label: "Holiday Worked", render: (r) => r.holidayWorkedDays || 0 },
+    { label: "Holiday Pay", render: (r) => Math.round(r.holidayPay || 0) },
     { label: "Late Deduct Days", render: (r) => r.lateDeductionDays },
     { label: "OT Worked (h)", render: (r) => r.workedOtHours.toFixed(2) },
     { label: "OT Approved (h)", render: (r) => r.approvedOtHours.toFixed(2) },
@@ -96,7 +99,7 @@ export default function PayrollTable({
       ],
       rows,
       totals,
-      note: `Per-day = salary ÷ ${divisor}. OT ${settings.otMethod === "flat" ? `at ${formatMoney(settings.otHourlyRate, c)}/h` : `= salary ÷ (${divisor} × ${settings.standardHoursPerDay}h)`}, ${approval ? "approved hours only" : "all worked hours"}. Late: 1 day's pay per ${settings.lateGroupSize} late days. Half-day pays ${Math.round(settings.halfDayPayFactor * 100)}%. Only unpaid absences are deducted (approved paid leave is excluded). Net = salary + OT + bonus − deductions − penalty − advance (salary advance recovered).`,
+      note: `Per-day = salary ÷ ${divisor}. OT ${settings.otMethod === "flat" ? `at ${formatMoney(settings.otHourlyRate, c)}/h` : `= salary ÷ (${divisor} × ${settings.standardHoursPerDay}h)`}, ${approval ? "approved hours only" : "all worked hours"}. Late: 1 day's pay per ${settings.lateGroupSize} late days. Half-day pays ${Math.round(settings.halfDayPayFactor * 100)}% (leaving before office end counts as a half day for office staff unless excused). Working a weekend/holiday pays one extra day. Only unpaid absences are deducted (approved paid leave is excluded). Net = salary + OT + holiday pay + bonus − deductions − penalty − advance (salary advance recovered).`,
     })
 
   if (!allRows.length && !excludedCount)
@@ -147,7 +150,7 @@ export default function PayrollTable({
         </span>
         <span>Late: 1 day per <b>{settings.lateGroupSize}</b> lates</span>
         <span>Half-day pays <b>{Math.round(settings.halfDayPayFactor * 100)}%</b></span>
-        <span className="font-medium">Net = salary + OT + bonus − deductions − penalty − advance</span>
+        <span className="font-medium">Net = salary + OT + holiday pay + bonus − deductions − penalty − advance</span>
         <span className="text-emerald-600/80 dark:text-emerald-400/70">Edit in Settings</span>
       </div>
 
@@ -199,7 +202,7 @@ export default function PayrollTable({
         </button>
       </Toolbar>
 
-      <TableWrap minWidth={1520}>
+      <TableWrap minWidth={1620}>
         <thead className="sticky top-0 z-10 bg-slate-100 text-xs uppercase tracking-wide dark:bg-slate-800">
           <tr>
             <SortTH field="id" label="ID" sort={sort} setSort={setSort} num />
@@ -212,6 +215,7 @@ export default function PayrollTable({
             <SortTH field="workedOtHours" label="OT worked" sort={sort} setSort={setSort} num />
             <th className="px-3 py-2.5 text-right font-semibold text-slate-600 dark:text-slate-300">OT approved</th>
             <SortTH field="otPay" label="OT Pay" sort={sort} setSort={setSort} num />
+            <SortTH field="holidayPay" label="Holiday (+)" sort={sort} setSort={setSort} num />
             <SortTH field="totalDeductions" label="Deductions" sort={sort} setSort={setSort} num />
             <th className="px-3 py-2.5 text-right font-semibold text-emerald-600 dark:text-emerald-400">Bonus (+)</th>
             <th className="px-3 py-2.5 text-right font-semibold text-rose-600 dark:text-rose-400">Penalty (−)</th>
@@ -266,8 +270,10 @@ export default function PayrollTable({
                 )}
               </td>
               <td className={numCell}>
-                {r.halfDays > 0 ? (
-                  <span className="text-orange-600 dark:text-orange-400">{r.halfDays}</span>
+                {r.halfDays + (r.earlyHalfDays || 0) > 0 ? (
+                  <span className="text-orange-600 dark:text-orange-400" title={`${r.halfDays} late-arrival half day(s), ${r.earlyHalfDays || 0} left before office end`}>
+                    {r.halfDays + (r.earlyHalfDays || 0)}
+                  </span>
                 ) : (
                   <span className="text-slate-300 dark:text-slate-600">0</span>
                 )}
@@ -298,6 +304,13 @@ export default function PayrollTable({
               </td>
               <td className={`${numCell} text-sky-600 dark:text-sky-400`}>
                 {r.otPay > 0 ? formatMoney(r.otPay, c) : <span className="text-slate-300 dark:text-slate-600">—</span>}
+              </td>
+              <td className={`${numCell} text-emerald-600 dark:text-emerald-400`}>
+                {r.holidayPay > 0 ? (
+                  <span title={`${r.holidayWorkedDays} weekend/holiday day(s) worked × one day's pay`}>{formatMoney(r.holidayPay, c)}</span>
+                ) : (
+                  <span className="text-slate-300 dark:text-slate-600">—</span>
+                )}
               </td>
               <td className={numCell}>
                 {r.totalDeductions > 0 ? (
@@ -346,6 +359,7 @@ export default function PayrollTable({
             <td className="px-3 py-2.5 text-right tabular-nums text-slate-500">{totals.workedOtHours.toFixed(1)}h</td>
             <td className="px-3 py-2.5 text-right tabular-nums text-emerald-700 dark:text-emerald-300">{totals.approvedOtHours.toFixed(1)}h</td>
             <td className="px-3 py-2.5 text-right tabular-nums text-sky-700 dark:text-sky-300">{formatMoney(totals.otPay, c)}</td>
+            <td className="px-3 py-2.5 text-right tabular-nums text-emerald-700 dark:text-emerald-300">{formatMoney(totals.holidayPay || 0, c)}</td>
             <td className="px-3 py-2.5 text-right tabular-nums text-rose-700 dark:text-rose-300">−{formatMoney(totals.totalDeductions, c)}</td>
             <td className="px-3 py-2.5 text-right tabular-nums text-emerald-700 dark:text-emerald-300">{formatMoney(totals.bonus, c)}</td>
             <td className="px-3 py-2.5 text-right tabular-nums text-rose-700 dark:text-rose-300">−{formatMoney(totals.penalty, c)}</td>

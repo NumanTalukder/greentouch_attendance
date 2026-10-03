@@ -8,6 +8,7 @@ import {
   buildDashboard,
   getPeriod,
   findUnknownIds,
+  applyCorrections,
 } from "@/lib/engine"
 import { buildPayroll } from "@/lib/payroll"
 import { buildLeave } from "@/lib/leave"
@@ -228,9 +229,19 @@ export default function AppShell() {
     () => [...machinePunches, ...appPunches.filter((p) => month && String(p.date).startsWith(month))],
     [machinePunches, appPunches, month],
   )
+  // Machine-fault / office-work corrections (with notes) for this month,
+  // applied before anything is computed so every screen agrees.
+  const corrections = useMemo(() => {
+    const out = {}
+    const byEmp = adjustments[month]?.corrections || {}
+    for (const [id, days] of Object.entries(byEmp))
+      for (const [d, c] of Object.entries(days || {}))
+        if (c) out[`${id}|${month}-${String(d).padStart(2, "0")}`] = c
+    return out
+  }, [adjustments, month])
   const records = useMemo(
-    () => buildDailyRecords(punches, settings, employees),
-    [punches, settings, employees],
+    () => applyCorrections(buildDailyRecords(punches, settings, employees), corrections, employees),
+    [punches, settings, employees, corrections],
   )
   const period = useMemo(() => getPeriod(records, settings), [records, settings])
   const summary = useMemo(

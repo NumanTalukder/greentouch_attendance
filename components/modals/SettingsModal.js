@@ -180,6 +180,18 @@ export default function SettingsModal({ settings, setSettings, onClose }) {
             Subtract one day of pay per absent day
           </label>
         </Field>
+        <Field label="Leaving early" hint={`Office staff leaving before ${draft.officeEnd}; excusable per day with a note`}>
+          <label className="flex items-center gap-2 py-1.5 text-sm text-slate-600 dark:text-slate-300">
+            <input type="checkbox" checked={draft.earlyLeaveHalfDay !== false} onChange={(e) => set("earlyLeaveHalfDay", e.target.checked)} className="accent-emerald-500" />
+            Counts as a half day
+          </label>
+        </Field>
+        <Field label="Holiday work" hint="Friday / weekend / declared holiday; lates still count">
+          <label className="flex items-center gap-2 py-1.5 text-sm text-slate-600 dark:text-slate-300">
+            <input type="checkbox" checked={draft.holidayWorkPay !== false} onChange={(e) => set("holidayWorkPay", e.target.checked)} className="accent-emerald-500" />
+            Pays one extra full day
+          </label>
+        </Field>
       </Section>
 
       <Section title="Paid leave (per leave year)">

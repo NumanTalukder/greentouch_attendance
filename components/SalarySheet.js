@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Icon, Segmented, StatCard, Empty } from "./ui"
+import Modal from "./modals/Modal"
 import { formatMoney } from "@/lib/format"
 import { computeSalary, monthInfo, WD } from "@/lib/salaryCalc"
 import { buildSalaryInput, advanceSchedule, advanceProgress, advanceDue } from "@/lib/salaryInput"
@@ -56,36 +57,178 @@ function AutoNum({ value, src, autoTag, onChange, onRevert, disabled, label, wid
   )
 }
 
-// One day in the attendance strip: P / A / ½, with where the value came from.
-function DayCell({ value, source, label, off, disabled, onToggle }) {
+// One day in the attendance strip. Opens the day editor on click.
+//   green solid P = worked a weekend / holiday (+1 day's pay)
+//   amber = late · orange = half day / left early · violet dot = corrected / edited
+function DayCell({ value, source, label, off, info, disabled, onOpen }) {
   const absent = value === 0
   const half = value > 0 && value < 1
+  const rec = info?.rec
+  const worked = info?.worked
+  const corrected = !!rec?.corrected || source === "override"
+  const late = rec?.isLate
+  const halfish = rec && (rec.isHalf || (rec.leftEarly && !off && !rec.earlyExcused))
   const tone = absent
     ? "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300"
-    : half
-      ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
-      : off
-        ? "bg-slate-200/70 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-        : "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400"
-  const word = absent ? "Absent" : half ? "Half day" : "Present"
-  const src = { data: "from attendance data", override: "edited", default: off ? "weekend / holiday" : "no data — default present" }[source]
+    : worked
+      ? "bg-emerald-600 text-white dark:bg-emerald-500"
+      : half || halfish
+        ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300"
+        : late
+          ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+          : off
+            ? "bg-slate-200/70 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+            : "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400"
+  const word = absent
+    ? "Absent"
+    : worked
+      ? "Worked a holiday (+1 day's pay)"
+      : half
+        ? "Half day"
+        : [late && "Late", rec?.isHalf && "Half day", rec?.leftEarly && !off && (rec.earlyExcused ? "Left early (office work)" : "Left early")]
+            .filter(Boolean)
+            .join(", ") || (off ? "Weekend / holiday" : "Present")
+  const times = rec?.first ? ` · in ${rec.first.slice(0, 5)}${rec.last && rec.last !== rec.first ? ` · out ${rec.last.slice(0, 5)}` : ""}` : ""
+  const note = rec?.corrected?.note ? ` · corrected: ${rec.corrected.note}` : ""
   return (
     <button
       type="button"
       disabled={disabled}
-      onClick={(e) => onToggle(e.shiftKey)}
-      title={`${label} · ${word} · ${src}`}
-      aria-label={`${label}: ${word}, ${src}`}
+      onClick={onOpen}
+      title={`${label} · ${word}${times}${note}`}
+      aria-label={`${label}: ${word}${times}${note}. Open day details`}
       className={`relative h-6 w-5 shrink-0 rounded text-[10px] font-semibold leading-6 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 enabled:cursor-pointer enabled:hover:brightness-95 disabled:cursor-not-allowed ${tone}`}
     >
       {absent ? "A" : half ? "½" : "P"}
-      {source === "override" && (
+      {corrected && (
         <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-violet-500 ring-1 ring-white dark:ring-slate-900" />
       )}
-      {source === "data" && (
+      {source === "data" && !worked && (
         <span className="absolute bottom-0.5 left-1/2 h-0.5 w-2.5 -translate-x-1/2 rounded bg-current opacity-50" />
       )}
     </button>
+  )
+}
+
+// Day details + fixes. Machine staff: corrections with a REQUIRED note
+// (machine fault, office work outside). Manual staff: P / A / ½ and holiday work.
+function DayEditor({ name, label, info, value, natural, tracked, isField, correction, holidayWork, locked, onClose, onSaveCorrection, onSetValue, onSetHoliday }) {
+  const rec = info.rec
+  const off = info.off
+  const [c, setC] = useState({
+    onTime: !!correction?.onTime,
+    excuseEarly: !!correction?.excuseEarly,
+    present: !!correction?.present,
+    note: correction?.note || "",
+  })
+  const [err, setErr] = useState("")
+  const machineMissed = !rec || (rec.sources || []).includes("manual")
+  const canOnTime = rec && !machineMissed && (rec.isLate || rec.isHalf || c.onTime)
+  const canEarly = rec && !machineMissed && !off && !isField && (rec.leftEarly || c.excuseEarly)
+  const any = c.onTime || c.excuseEarly || c.present
+  const save = () => {
+    if (any && c.note.trim().length < 3) return setErr("Please write a short note explaining the correction.")
+    onSaveCorrection(any ? { onTime: c.onTime || undefined, excuseEarly: c.excuseEarly || undefined, present: c.present || undefined, note: c.note.trim(), at: new Date().toISOString() } : null)
+    onClose()
+  }
+  const box = (k, text, hint) => (
+    <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-slate-200 p-2.5 transition hover:border-emerald-300 dark:border-slate-700">
+      <input type="checkbox" checked={c[k]} disabled={locked} onChange={(e) => setC({ ...c, [k]: e.target.checked })} className="mt-0.5 h-4 w-4 accent-emerald-600" />
+      <span>
+        <span className="block text-sm font-medium text-slate-800 dark:text-slate-100">{text}</span>
+        {hint && <span className="block text-xs text-slate-500 dark:text-slate-400">{hint}</span>}
+      </span>
+    </label>
+  )
+  const chip = (t, tone) => <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${tone}`}>{t}</span>
+  return (
+    <Modal title={`${name} — ${label}`} subtitle={tracked ? "Machine staff · from attendance data" : "Manual attendance (not on machine)"} width="max-w-md" onClose={onClose}>
+      {tracked ? (
+        <div className="space-y-3">
+          <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm dark:bg-slate-800/60">
+            {rec && !machineMissed ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-medium tabular-nums">
+                  In {rec.first?.slice(0, 5) || "—"} · Out {rec.last && rec.punchCount > 1 ? rec.last.slice(0, 5) : "—"}
+                </span>
+                {off && chip("Holiday worked", "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300")}
+                {(rec.isLate || (correction?.onTime && rec.status)) && chip(correction?.onTime ? "Late → corrected" : "Late", "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300")}
+                {rec.isHalf && chip("Half day", "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300")}
+                {rec.leftEarly && !off && chip(rec.earlyExcused ? "Left early → office work" : "Left early", "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300")}
+              </div>
+            ) : (
+              <span className="text-slate-600 dark:text-slate-300">
+                {machineMissed && rec ? "Marked present by correction" : off ? "No punches on this holiday" : "No punches — counted absent"}
+              </span>
+            )}
+          </div>
+          {canOnTime && box("onTime", "Came on time — the machine recorded the wrong time", "Removes the late / half-day for this day")}
+          {canEarly && box("excuseEarly", "Left early for office work (outside the office)", "No half-day deduction for leaving before office end")}
+          {(machineMissed || c.present) &&
+            box(
+              "present",
+              off ? "Worked this holiday — the machine missed the punch" : "Was at work — the machine missed the punch",
+              off ? "Counts as holiday work (+1 day's pay)" : "Counts as present for this day",
+            )}
+          {!canOnTime && !canEarly && !machineMissed && !c.present && (
+            <p className="text-sm text-slate-500 dark:text-slate-400">Nothing to correct on this day.</p>
+          )}
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
+              Note {any && <span className="text-rose-600">*</span>}
+            </span>
+            <textarea
+              value={c.note}
+              disabled={locked}
+              onChange={(e) => setC({ ...c, note: e.target.value })}
+              placeholder="e.g. Machine was down 9–10 am, confirmed by the manager"
+              className="h-20 w-full resize-none rounded-lg border border-slate-200 bg-white p-2 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/30 dark:border-slate-700 dark:bg-slate-950"
+            />
+          </label>
+          {err && <p role="alert" className="text-sm text-rose-600">{err}</p>}
+          <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+            {correction && !locked ? (
+              <button onClick={() => { onSaveCorrection(null); onClose() }} className="cursor-pointer text-sm font-medium text-rose-600 hover:underline">
+                Remove correction
+              </button>
+            ) : <span />}
+            <div className="flex gap-2">
+              <button onClick={onClose} className="cursor-pointer rounded-lg border border-slate-200 px-3 py-1.5 text-sm dark:border-slate-700">Cancel</button>
+              <button onClick={save} disabled={locked} className="cursor-pointer rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">Save</button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {off ? (
+            <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-slate-200 p-2.5 dark:border-slate-700">
+              <input type="checkbox" checked={!!holidayWork} disabled={locked} onChange={(e) => onSetHoliday(e.target.checked)} className="mt-0.5 h-4 w-4 accent-emerald-600" />
+              <span>
+                <span className="block text-sm font-medium text-slate-800 dark:text-slate-100">Worked this holiday</span>
+                <span className="block text-xs text-slate-500 dark:text-slate-400">Pays one extra full day</span>
+              </span>
+            </label>
+          ) : (
+            <div>
+              <p className="mb-2 text-sm text-slate-600 dark:text-slate-300">Attendance for this day</p>
+              <div className="inline-flex rounded-lg bg-slate-100 p-1 dark:bg-slate-800">
+                {[[1, "Present"], [0, "Absent"], [0.5, "Half day"]].map(([v, t]) => (
+                  <button key={t} disabled={locked} onClick={() => onSetValue(v, natural)} className={`cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium transition ${value === v ? "bg-white shadow-sm dark:bg-slate-700" : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"}`}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Saved instantly. To judge this person from punches (late, half day, left early), tick “On machine” in Employees.
+          </p>
+          <div className="flex justify-end border-t border-slate-100 pt-3 dark:border-slate-800">
+            <button onClick={onClose} className="cursor-pointer rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700">Done</button>
+          </div>
+        </div>
+      )}
+    </Modal>
   )
 }
 
@@ -164,15 +307,32 @@ export default function SalarySheet({
     [month, updateMonth],
   )
 
-  const toggleDay = (key, d, current, natural, half) => {
-    const next = half ? (current === 0.5 ? 1 : 0.5) : current >= 1 ? 0 : 1
+  // day editor: which staff row / day is open
+  const [editing, setEditing] = useState(null) // { i, d } (d = 0-based)
+  const saveCorrection = (key, d, corr) =>
+    updateMonth(month, "corrections", (m) => {
+      const row = { ...(m[key] || {}) }
+      if (corr) row[d] = corr
+      else delete row[d]
+      const n = { ...m }
+      if (Object.keys(row).length) n[key] = row
+      else delete n[key]
+      return n
+    })
+  const setDayValue = (key, d, v, natural) =>
     updateMonth(month, "days", (all) => {
       const row = { ...(all[key] || {}) }
-      if (next === natural) delete row[d]
-      else row[d] = next
+      if (v === natural) delete row[d]
+      else row[d] = v
       return { ...all, [key]: row }
     })
-  }
+  const setHolidayWork = (key, d, on) =>
+    updateMonth(month, "holidayWork", (all) => {
+      const row = { ...(all[key] || {}) }
+      if (on) row[d] = 1
+      else delete row[d]
+      return { ...all, [key]: row }
+    })
   const resetRow = (key) =>
     updateMonth(month, "days", (all) => {
       const next = { ...all }
@@ -381,6 +541,7 @@ export default function SalarySheet({
                       <TH right>OT worked</TH>
                       <TH right>OT approved</TH>
                       <TH right>OT pay</TH>
+                      <TH right className="text-emerald-600 dark:text-emerald-400">Holiday (+)</TH>
                       <TH right>Deductions</TH>
                       <TH right className="text-emerald-600 dark:text-emerald-400">Bonus (+)</TH>
                       <TH right className="text-rose-600 dark:text-rose-400">Penalty (−)</TH>
@@ -396,7 +557,7 @@ export default function SalarySheet({
                       const dedTitle = [
                         `Absent ${n0(s.lwp)} (${s.lwpDays} day${s.lwpDays === 1 ? "" : "s"} unpaid${s.leaveDays ? `, ${s.leaveDays} on paid leave` : ""})`,
                         `Late ${n0(s.late)} (${s.lateDays} late → ${s.lateCutDays} day cut)`,
-                        `Half day ${n0(s.half)} (${s.halfDays} half day${s.halfDays === 1 ? "" : "s"})`,
+                        `Half day ${n0(s.half)} (${s.halfDays} late-arrival half day${s.halfDays === 1 ? "" : "s"} + ${s.earlyDays} left early)`,
                         `One day = ${n0(s.rate)} (gross ÷ ${built.input.dayRule.divisor})`,
                       ].join("\n")
                       return (
@@ -438,10 +599,10 @@ export default function SalarySheet({
                                     key={d}
                                     value={v}
                                     source={meta.sources[d]}
-                                    off={meta.isField ? (settings.holidays || []).includes(dayLabels[d].iso) : dayLabels[d].off}
+                                    off={meta.dayInfo[d].off}
+                                    info={meta.dayInfo[d]}
                                     label={dayLabels[d].label}
-                                    disabled={locked}
-                                    onToggle={(half) => toggleDay(s.key, d + 1, v, meta.natural[d], half)}
+                                    onOpen={() => setEditing({ i, d })}
                                   />
                                 ))}
                               </div>
@@ -456,7 +617,9 @@ export default function SalarySheet({
                             )}
                           </TD>
                           <TD right className={s.lateDays ? "text-amber-600 dark:text-amber-400" : "text-slate-400"}>{s.lateDays || "–"}</TD>
-                          <TD right className={s.halfDays ? "text-orange-600 dark:text-orange-400" : "text-slate-400"}>{s.halfDays || "–"}</TD>
+                          <TD right className={s.halfDays + s.earlyDays ? "text-orange-600 dark:text-orange-400" : "text-slate-400"}>
+                            <span title={`${s.halfDays} late-arrival half day(s), ${s.earlyDays} left before office end`}>{s.halfDays + s.earlyDays || "–"}</span>
+                          </TD>
                           <TD right className="text-slate-500">{meta.workedOt ? meta.workedOt.toFixed(1) : "–"}</TD>
                           <TD right>
                             <NumIn label={`Approved overtime hours for ${s.name}`} value={meta.approvedOt} step="0.5" width="w-16" disabled={locked} onChange={(v) => setAdj("ot", s.key, v)} />
@@ -465,6 +628,9 @@ export default function SalarySheet({
                             )}
                           </TD>
                           <TD right className={s.otPay ? "" : "text-slate-400"}>{s.otPay ? n0(s.otPay) : "–"}</TD>
+                          <TD right className={s.holidayPay ? "font-medium text-emerald-700 dark:text-emerald-400" : "text-slate-400"}>
+                            <span title={`${s.holidayDays} weekend/holiday day(s) worked × one day's pay`}>{s.holidayPay ? n0(s.holidayPay) : "–"}</span>
+                          </TD>
                           <TD right className={s.attendanceDed ? "text-rose-600 dark:text-rose-400" : "text-slate-400"}>
                             <span title={dedTitle} className="cursor-help underline decoration-dotted underline-offset-2">
                               {s.attendanceDed ? n0(s.attendanceDed) : "–"}
@@ -504,10 +670,11 @@ export default function SalarySheet({
                       <TD right>{calc.staff.reduce((a, s) => a + s.present, 0)}</TD>
                       <TD right>{calc.staff.reduce((a, s) => a + s.absentDays, 0) || "–"}</TD>
                       <TD right>{calc.staff.reduce((a, s) => a + s.lateDays, 0) || "–"}</TD>
-                      <TD right>{calc.staff.reduce((a, s) => a + s.halfDays, 0) || "–"}</TD>
+                      <TD right>{calc.staff.reduce((a, s) => a + s.halfDays + s.earlyDays, 0) || "–"}</TD>
                       <TD right>{(built.staffMeta.reduce((a, m) => a + m.workedOt, 0) || 0).toFixed(1)}</TD>
                       <TD right>{calc.staff.reduce((a, s) => a + s.otHours, 0) || "–"}</TD>
                       <TD right>{n0(t.otPay)}</TD>
+                      <TD right>{n0(t.holidayPay)}</TD>
                       <TD right>{n0(t.lwp + t.late + t.half)}</TD>
                       <TD right>{n0(t.bonus + t.encash)}</TD>
                       <TD right>{n0(t.penalty)}</TD>
@@ -682,10 +849,41 @@ export default function SalarySheet({
             </div>
           </div>
 
+          {editing && calc.staff[editing.i] && (() => {
+            const st = calc.staff[editing.i]
+            const meta = built.staffMeta[editing.i]
+            const d = editing.d
+            const info = meta.dayInfo[d]
+            return (
+              <DayEditor
+                key={`${st.key}-${d}`}
+                name={st.name}
+                label={dayLabels[d].label}
+                info={info}
+                value={st.grid[d]}
+                natural={meta.natural[d]}
+                tracked={meta.tracked && info.covered}
+                isField={meta.isField}
+                correction={adjustments[month]?.corrections?.[st.key]?.[d + 1]}
+                holidayWork={adjustments[month]?.holidayWork?.[st.key]?.[d + 1]}
+                locked={locked}
+                onClose={() => setEditing(null)}
+                onSaveCorrection={(c) => saveCorrection(st.key, d + 1, c)}
+                onSetValue={(v, nat) => setDayValue(st.key, d + 1, v, nat)}
+                onSetHoliday={(on) => setHolidayWork(st.key, d + 1, on)}
+              />
+            )
+          })()}
+
           {/* Legend */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-            <span><b className="text-emerald-700 dark:text-emerald-400">P</b> present · <b className="text-rose-600">A</b> absent (LWP) · <b className="text-amber-600">½</b> half day</span>
-            <span>Click a day to switch P/A · Shift-click for ½</span>
+            <span>
+              <b className="text-emerald-700 dark:text-emerald-400">P</b> present ·{" "}
+              <b className="rounded bg-emerald-600 px-1 text-white">P</b> worked a holiday (+1 day) ·{" "}
+              <b className="text-amber-600">P</b> late · <b className="text-orange-600">P</b> half day / left early ·{" "}
+              <b className="text-rose-600">A</b> absent
+            </span>
+            <span>Click any day for details and corrections (with a note)</span>
             <span className="inline-flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-violet-500" /> edited by hand</span>
             <span className="inline-flex items-center gap-1"><span className="h-0.5 w-2.5 rounded bg-slate-400" /> from attendance data</span>
             <span>Same rules as Payroll: one day = gross ÷ {built.input.dayRule.divisor} · absent (after paid leave), late &amp; half-day deducted · OT = approved hours only</span>

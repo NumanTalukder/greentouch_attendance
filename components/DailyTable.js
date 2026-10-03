@@ -191,6 +191,14 @@ export default function DailyTable({ records, period, settings }) {
               <td className="px-3 py-2">
                 <div className="flex items-center gap-1.5">
                   <StatusBadge status={r.status} />
+                  {r.corrected && (
+                    <span
+                      title={`Corrected: ${[r.corrected.onTime && "came on time (machine fault)", r.corrected.excuseEarly && "left early for office work", r.corrected.present && "present, machine missed the punch"].filter(Boolean).join(", ")}${r.corrected.note ? ` — ${r.corrected.note}` : ""}`}
+                      className="cursor-help rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 dark:bg-violet-900/40 dark:text-violet-300"
+                    >
+                      corrected
+                    </span>
+                  )}
                   {r.punchCount === 1 && (
                     <span className="text-xs text-violet-500" title="Only one punch recorded">
                       1 punch
