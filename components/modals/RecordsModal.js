@@ -175,9 +175,9 @@ export default function RecordsModal({ monthKey, period, payroll, currency, onCl
         </p>
       )}
       {state === "ready" && list.length > 0 && (
-        <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-800">
+        <div className="max-h-[60vh] overflow-auto rounded-lg border border-slate-200 dark:border-slate-800">
+          <table className="data-table">
+            <thead>
               <tr>
                 <th className="px-3 py-2 text-left">Month</th>
                 <th className="px-3 py-2 text-right">Employees</th>
@@ -294,8 +294,8 @@ function MonthDetail({ detail, currency, onBack, onToggleLock }) {
         </p>
       ) : (
         <div className="max-h-[52vh] overflow-auto rounded-lg border border-slate-200 dark:border-slate-800">
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-slate-100 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-800">
+          <table className="data-table">
+            <thead>
               <tr>
                 <th className="px-3 py-2 text-left">Employee</th>
                 <th className="px-2 py-2 text-right">Pres</th>
@@ -323,7 +323,7 @@ function MonthDetail({ detail, currency, onBack, onToggleLock }) {
               ))}
             </tbody>
             <tfoot>
-              <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold dark:border-slate-700 dark:bg-slate-800/50">
+              <tr>
                 <td className="px-3 py-2">Total</td>
                 <td colSpan={3} />
                 <td className="px-2 py-2 text-right tabular-nums">{num(t.otPay)}</td>

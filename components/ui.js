@@ -320,7 +320,7 @@ export const SortTH = ({ field, label, sort, setSort, num, className = "" }) => 
           dir: active && sort.dir === "asc" ? "desc" : "asc",
         })
       }
-      className={`cursor-pointer select-none px-3 py-2.5 font-semibold text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white ${
+      className={`cursor-pointer select-none px-3 py-2.5 font-semibold text-slate-500 transition hover:text-slate-900 dark:text-slate-400 dark:hover:text-white ${
         num ? "text-right" : "text-left"
       } ${className}`}
     >

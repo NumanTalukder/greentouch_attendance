@@ -234,7 +234,7 @@ function DayEditor({ name, label, info, value, natural, tracked, isField, correc
 
 const TH = ({ children, right, className = "" }) => (
   <th
-    className={`sticky top-0 z-10 whitespace-nowrap bg-slate-50 px-2 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 shadow-[inset_0_-1px_0_theme(colors.slate.200)] dark:bg-slate-800 dark:text-slate-400 dark:shadow-[inset_0_-1px_0_theme(colors.slate.700)] ${right ? "text-right" : "text-left"} ${className}`}
+    className={`px-2 py-2 ${right ? "text-right" : "text-left"} ${className}`}
   >
     {children}
   </th>
@@ -503,12 +503,43 @@ export default function SalarySheet({
             ]}
           />
 
+          {/* Key + rules sit ABOVE the table, so nothing below it can push the pinned header off-screen */}
+          <div className="-mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+            {view === "staff" && (
+              <>
+                <span className="inline-flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                  <span><b className="text-emerald-700 dark:text-emerald-400">P</b> present</span>
+                  <span><b className="rounded bg-emerald-600 px-1 text-white">P</b> worked a holiday</span>
+                  <span><b className="text-amber-600">P</b> late</span>
+                  <span><b className="text-orange-600">P</b> half day / left early</span>
+                  <span><b className="text-rose-600">A</b> absent</span>
+                  <span className="inline-flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-violet-500" /> edited</span>
+                  <span className="inline-flex items-center gap-1"><span className="h-0.5 w-2.5 rounded bg-slate-400" /> from attendance</span>
+                </span>
+                <span className="text-slate-400">Click a day to see or correct it</span>
+              </>
+            )}
+            <details className="group ml-auto">
+              <summary className="cursor-pointer list-none font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200">
+                How it’s calculated <span className="inline-block transition group-open:rotate-180">▾</span>
+              </summary>
+              <div className="mt-2 max-w-xl space-y-1 rounded-lg border border-slate-200 bg-white p-3 text-slate-600 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                <p>Same rules as Payroll: one day = gross ÷ {built.input.dayRule.divisor} · absent (after paid leave), late &amp; half-day deducted · OT = approved hours only · a worked holiday pays one extra day.</p>
+                <p><b>Auto-filled:</b> attendance, lates, half days &amp; worked OT from the machine · advances from the ledger · paid leave from the Leave tab · bonus, penalty &amp; OT approvals shared with Payroll.</p>
+                {onOpenEmployees && (
+                  <button onClick={onOpenEmployees} className="cursor-pointer font-medium text-emerald-700 hover:underline dark:text-emerald-400">
+                    Edit pay group / machine staff in Employees
+                  </button>
+                )}
+              </div>
+            </details>
+          </div>
+
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            {/* scrolls in both directions inside the card so the header row (and totals) stay in view */}
-            <div className="max-h-[75vh] overflow-auto">
+            <div className="table-scroll">
               {view === "staff" && (
-                <table className="w-full text-sm">
-                  <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/60">
+                <table className="data-table">
+                  <thead>
                     <tr>
                       <TH className="left-0 z-20">
                         <div className="flex items-center gap-2">
@@ -551,7 +582,7 @@ export default function SalarySheet({
                       <TH right>Net payable</TH>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  <tbody>
                     {calc.staff.map((s, i) => {
                       const meta = built.staffMeta[i]
                       const edited = meta.sources.includes("override")
@@ -663,9 +694,9 @@ export default function SalarySheet({
                       )
                     })}
                   </tbody>
-                  <tfoot className="sticky bottom-0 z-10 bg-slate-50 font-semibold dark:bg-slate-800 [&>tr>td]:shadow-[inset_0_2px_0_theme(colors.slate.300)] dark:[&>tr>td]:shadow-[inset_0_2px_0_theme(colors.slate.700)]">
+                  <tfoot>
                     <tr>
-                      <TD className="sticky left-0 bg-slate-50 dark:bg-slate-800">Total</TD>
+                      <TD className="left-0 z-20">Total</TD>
                       {showDays && <TD />}
                       <TD right>{n0(t.staffGross)}</TD>
                       <TD right>{calc.staff.reduce((a, s) => a + s.present, 0)}</TD>
@@ -688,8 +719,8 @@ export default function SalarySheet({
               )}
 
               {view === "directors" && (
-                <table className="w-full text-sm">
-                  <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/60">
+                <table className="data-table">
+                  <thead>
                     <tr>
                       <TH>Director</TH>
                       <TH right>Remuneration</TH>
@@ -702,7 +733,7 @@ export default function SalarySheet({
                       <TH right>Net</TH>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  <tbody>
                     {calc.directors.map((d) => (
                       <tr key={d.key} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
                         <TD>
@@ -730,7 +761,7 @@ export default function SalarySheet({
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="sticky bottom-0 z-10 bg-slate-50 font-semibold dark:bg-slate-800 [&>tr>td]:shadow-[inset_0_2px_0_theme(colors.slate.300)] dark:[&>tr>td]:shadow-[inset_0_2px_0_theme(colors.slate.700)]">
+                  <tfoot>
                     <tr>
                       <TD>Total</TD>
                       <TD right>{n0(t.dirGross)}</TD>
@@ -744,8 +775,8 @@ export default function SalarySheet({
               )}
 
               {view === "overtime" && (
-                <table className="w-full text-sm">
-                  <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/60">
+                <table className="data-table">
+                  <thead>
                     <tr>
                       <TH>Employee</TH>
                       <TH right>Salary</TH>
@@ -757,7 +788,7 @@ export default function SalarySheet({
                       <TH right>OT pay</TH>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  <tbody>
                     {calc.staff.map((s, i) => {
                       const meta = built.staffMeta[i]
                       const active = s.otHours || s.otAdjust || meta.workedOt
@@ -788,7 +819,7 @@ export default function SalarySheet({
                       )
                     })}
                   </tbody>
-                  <tfoot className="sticky bottom-0 z-10 bg-slate-50 font-semibold dark:bg-slate-800 [&>tr>td]:shadow-[inset_0_2px_0_theme(colors.slate.300)] dark:[&>tr>td]:shadow-[inset_0_2px_0_theme(colors.slate.700)]">
+                  <tfoot>
                     <tr>
                       <TD>Total</TD>
                       <TD /><TD />
@@ -813,15 +844,15 @@ export default function SalarySheet({
               )}
 
               {view === "off" && (
-                <table className="w-full text-sm">
-                  <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/60">
+                <table className="data-table">
+                  <thead>
                     <tr>
                       <TH>Employee</TH>
                       <TH right>Salary</TH>
                       <TH right>Add to sheet</TH>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  <tbody>
                     {built.notOnSheet.map((e) => (
                       <tr key={e.key} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
                         <TD>
@@ -876,25 +907,6 @@ export default function SalarySheet({
             )
           })()}
 
-          {/* Legend */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-            <span>
-              <b className="text-emerald-700 dark:text-emerald-400">P</b> present ·{" "}
-              <b className="rounded bg-emerald-600 px-1 text-white">P</b> worked a holiday (+1 day) ·{" "}
-              <b className="text-amber-600">P</b> late · <b className="text-orange-600">P</b> half day / left early ·{" "}
-              <b className="text-rose-600">A</b> absent
-            </span>
-            <span>Click any day for details and corrections (with a note)</span>
-            <span className="inline-flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-violet-500" /> edited by hand</span>
-            <span className="inline-flex items-center gap-1"><span className="h-0.5 w-2.5 rounded bg-slate-400" /> from attendance data</span>
-            <span>Same rules as Payroll: one day = gross ÷ {built.input.dayRule.divisor} · absent (after paid leave), late &amp; half-day deducted · OT = approved hours only</span>
-            <span><b>Auto-filled:</b> attendance, lates, half days &amp; worked OT from the machine · advances from the ledger · paid leave from the Leave tab · bonus, penalty &amp; OT approvals shared with Payroll</span>
-            {onOpenEmployees && (
-              <button onClick={onOpenEmployees} className="cursor-pointer font-medium text-emerald-700 hover:underline dark:text-emerald-400">
-                Edit pay group / machine staff in Employees
-              </button>
-            )}
-          </div>
         </>
       )}
     </div>
@@ -1002,8 +1014,8 @@ function AdvancesLedger({ month, advances, setAdvances, people, currency }) {
       </div>
 
       {rows.length ? (
-        <table className="w-full text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/60">
+        <table className="data-table">
+          <thead>
             <tr>
               <TH>Employee</TH>
               <TH>Given</TH>
@@ -1016,7 +1028,7 @@ function AdvancesLedger({ month, advances, setAdvances, people, currency }) {
               <TH />
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+          <tbody>
             {rows.map((a) => {
               const p = advanceProgress(a, month)
               const due = advanceSchedule(a).find((x) => x.month === month)?.amount || 0
@@ -1043,7 +1055,7 @@ function AdvancesLedger({ month, advances, setAdvances, people, currency }) {
               )
             })}
           </tbody>
-          <tfoot className="sticky bottom-0 z-10 bg-slate-50 font-semibold dark:bg-slate-800 [&>tr>td]:shadow-[inset_0_2px_0_theme(colors.slate.300)] dark:[&>tr>td]:shadow-[inset_0_2px_0_theme(colors.slate.700)]">
+          <tfoot>
             <tr>
               <TD>Total</TD>
               <TD /><TD /><TD />

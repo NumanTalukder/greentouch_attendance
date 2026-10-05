@@ -131,7 +131,7 @@ export default function DailyTable({ records, period, settings }) {
       </Toolbar>
 
       <TableWrap minWidth={960}>
-        <thead className="sticky top-0 z-10 bg-slate-100 text-xs uppercase tracking-wide dark:bg-slate-800">
+        <thead>
           <tr>
             <SortTH field="id" label="ID" sort={sort} setSort={setSort} num />
             <SortTH field="name" label="Name" sort={sort} setSort={setSort} />
@@ -140,10 +140,10 @@ export default function DailyTable({ records, period, settings }) {
             <SortTH field="lastMin" label="Check Out" sort={sort} setSort={setSort} num />
             <SortTH field="workMinutes" label="Work" sort={sort} setSort={setSort} num />
             <SortTH field="otMinutes" label="OT" sort={sort} setSort={setSort} num />
-            <th className="px-3 py-2.5 text-left font-semibold text-slate-600 dark:text-slate-300">
+            <th className="px-3 py-2.5 text-left font-semibold text-slate-500 dark:text-slate-400">
               Status
             </th>
-            <th className="px-3 py-2.5 text-left font-semibold text-slate-600 dark:text-slate-300">
+            <th className="px-3 py-2.5 text-left font-semibold text-slate-500 dark:text-slate-400">
               Source
             </th>
           </tr>
@@ -270,8 +270,8 @@ export function Toolbar({ search, setSearch, onCSV, onPrint, count, children }) 
 
 export function TableWrap({ children, minWidth = 820 }) {
   return (
-    <div className="max-h-[70vh] overflow-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <table className="w-full border-collapse text-sm" style={{ minWidth }}>
+    <div className="table-scroll rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <table className="data-table" style={{ minWidth }}>
         {children}
       </table>
     </div>

@@ -43,6 +43,74 @@
   }
 }
 
+/* One look for every data table in the app (Daily, Summary, Leave, Payroll,
+   Salary sheet, Records, Live): the header row and the totals row stay pinned
+   while the rows scroll, values never wrap onto two lines, quiet dividers.
+   :where() keeps these at utility-level specificity, so a cell's own Tailwind
+   classes (colours, sticky-left columns, z-index) still win. */
+@layer components {
+  /* Never taller than the screen minus what sits below it (the page footer),
+     so even scrolled to the very bottom the header row is still on screen. */
+  .table-scroll {
+    max-height: calc(100dvh - 7rem);
+    overflow: auto;
+  }
+  @media (max-width: 767px) {
+    /* phones also have the 48px top bar */
+    .table-scroll {
+      max-height: calc(100dvh - 10rem);
+    }
+  }
+  .data-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.875rem;
+  }
+  .data-table :where(thead th) {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    vertical-align: bottom;
+    box-shadow: inset 0 -1px 0 #e2e8f0;
+  }
+  .data-table :where(tbody td) {
+    white-space: nowrap;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .data-table :where(tbody tr:last-child td) {
+    border-bottom: 0;
+  }
+  .data-table :where(tfoot td) {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    white-space: nowrap;
+    background: #f8fafc;
+    font-weight: 600;
+    box-shadow: inset 0 1px 0 #cbd5e1;
+  }
+  :where(.dark) .data-table :where(thead th) {
+    background: #1e293b;
+    color: #94a3b8;
+    box-shadow: inset 0 -1px 0 #334155;
+  }
+  :where(.dark) .data-table :where(tbody td) {
+    border-bottom-color: #1e293b;
+  }
+  :where(.dark) .data-table :where(tfoot td) {
+    background: #1e293b;
+    box-shadow: inset 0 1px 0 #475569;
+  }
+}
+
 ::selection {
   background: rgba(16, 185, 129, 0.25);
 }

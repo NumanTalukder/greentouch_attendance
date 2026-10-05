@@ -108,7 +108,7 @@ export default function LeaveTable({ leave, period, monthKey, onEarned, onSick, 
             count={rows.length}
           />
           <TableWrap minWidth={1100}>
-            <thead className="sticky top-0 z-10 bg-slate-100 text-xs uppercase tracking-wide dark:bg-slate-800">
+            <thead>
               <tr>
                 <SortTH field="id" label="ID" sort={sort} setSort={setSort} num />
                 <SortTH field="name" label="Employee" sort={sort} setSort={setSort} />
@@ -117,9 +117,9 @@ export default function LeaveTable({ leave, period, monthKey, onEarned, onSick, 
                 <th className="px-3 py-2.5 text-right font-semibold text-sky-600 dark:text-sky-400">Sick taken</th>
                 <th className="px-3 py-2.5 text-right font-semibold text-violet-600 dark:text-violet-400">Monthly taken</th>
                 <SortTH field="unpaidAbsent" label="Unpaid absent" sort={sort} setSort={setSort} num />
-                <th className="px-3 py-2.5 text-right font-semibold text-slate-600 dark:text-slate-300">Earned balance</th>
-                <th className="px-3 py-2.5 text-right font-semibold text-slate-600 dark:text-slate-300">Sick balance</th>
-                <th className="px-3 py-2.5 text-right font-semibold text-slate-600 dark:text-slate-300">Monthly (field)</th>
+                <th className="px-3 py-2.5 text-right font-semibold text-slate-500 dark:text-slate-400">Earned balance</th>
+                <th className="px-3 py-2.5 text-right font-semibold text-slate-500 dark:text-slate-400">Sick balance</th>
+                <th className="px-3 py-2.5 text-right font-semibold text-slate-500 dark:text-slate-400">Monthly (field)</th>
               </tr>
             </thead>
             <tbody>

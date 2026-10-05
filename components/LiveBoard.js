@@ -161,46 +161,48 @@ export default function LiveBoard({ period, employees, settings }) {
             hint="App check-ins that are approved and checked out will roll up here per project."
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[520px] text-sm">
-              <thead className="text-xs uppercase tracking-wide text-slate-500">
-                <tr className="border-b border-slate-100 dark:border-slate-800">
-                  <th className="py-2 text-left font-semibold">Project</th>
-                  <th className="py-2 text-right font-semibold">People</th>
-                  <th className="py-2 text-right font-semibold">Hours</th>
-                  <th className="py-2 pl-4 text-left font-semibold">Share</th>
-                  <th className="py-2 text-right font-semibold">Est. labour cost</th>
+          <div className="table-scroll rounded-lg border border-slate-200 dark:border-slate-800">
+            <table className="data-table min-w-[520px]">
+              <thead>
+                <tr>
+                  <th className="px-3 py-2.5 text-left font-semibold">Project</th>
+                  <th className="px-3 py-2.5 text-right font-semibold">People</th>
+                  <th className="px-3 py-2.5 text-right font-semibold">Hours</th>
+                  <th className="px-3 py-2.5 text-left font-semibold">Share</th>
+                  <th className="px-3 py-2.5 text-right font-semibold">Est. labour cost</th>
                 </tr>
               </thead>
               <tbody>
                 {byProject.map((p) => (
-                  <tr key={p.project} className="border-b border-slate-50 dark:border-slate-800/60">
-                    <td className="py-2.5 font-medium">{p.project}</td>
-                    <td className="py-2.5 text-right tabular-nums">{p.employees}</td>
-                    <td className="py-2.5 text-right tabular-nums">{p.hours.toFixed(1)}h</td>
-                    <td className="py-2.5 pl-4">
+                  <tr key={p.project} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    <td className="px-3 py-2.5 font-medium">{p.project}</td>
+                    <td className="px-3 py-2.5 text-right tabular-nums">{p.employees}</td>
+                    <td className="px-3 py-2.5 text-right tabular-nums">{p.hours.toFixed(1)}h</td>
+                    <td className="px-3 py-2.5">
                       <div className="w-28"><Bar value={p.minutes} max={maxMin} tone="blue" /></div>
                     </td>
-                    <td className="py-2.5 text-right font-medium tabular-nums">
+                    <td className="px-3 py-2.5 text-right font-medium tabular-nums">
                       {p.cost > 0 ? formatMoney(p.cost, c) : <span className="text-slate-300 dark:text-slate-600">—</span>}
                     </td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
-                <tr className="border-t-2 border-slate-200 font-semibold dark:border-slate-700">
-                  <td className="py-2.5">Total</td>
+                <tr>
+                  <td className="px-3 py-2.5">Total</td>
                   <td></td>
-                  <td className="py-2.5 text-right tabular-nums">{(totals.minutes / 60).toFixed(1)}h</td>
+                  <td className="px-3 py-2.5 text-right tabular-nums">{(totals.minutes / 60).toFixed(1)}h</td>
                   <td></td>
-                  <td className="py-2.5 text-right tabular-nums text-emerald-700 dark:text-emerald-300">{formatMoney(totals.cost, c)}</td>
+                  <td className="px-3 py-2.5 text-right tabular-nums text-emerald-700 dark:text-emerald-300">{formatMoney(totals.cost, c)}</td>
                 </tr>
               </tfoot>
             </table>
-            <p className="mt-2 text-xs text-slate-400">
-              Cost = hours × each employee&apos;s hourly rate (salary ÷ {divisor} ÷ {hoursPerDay}h). Approved, checked-out sessions only.
-            </p>
           </div>
+        )}
+        {byProject.length > 0 && (
+          <p className="mt-2 text-xs text-slate-400">
+            Cost = hours × each employee&apos;s hourly rate (salary ÷ {divisor} ÷ {hoursPerDay}h). Approved, checked-out sessions only.
+          </p>
         )}
       </Panel>
     </div>

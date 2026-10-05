@@ -203,7 +203,7 @@ export default function PayrollTable({
       </Toolbar>
 
       <TableWrap minWidth={1620}>
-        <thead className="sticky top-0 z-10 bg-slate-100 text-xs uppercase tracking-wide dark:bg-slate-800">
+        <thead>
           <tr>
             <SortTH field="id" label="ID" sort={sort} setSort={setSort} num />
             <SortTH field="name" label="Employee" sort={sort} setSort={setSort} />
@@ -213,7 +213,7 @@ export default function PayrollTable({
             <SortTH field="lateDays" label="Late" sort={sort} setSort={setSort} num />
             <SortTH field="halfDays" label="Half" sort={sort} setSort={setSort} num />
             <SortTH field="workedOtHours" label="OT worked" sort={sort} setSort={setSort} num />
-            <th className="px-3 py-2.5 text-right font-semibold text-slate-600 dark:text-slate-300">OT approved</th>
+            <th className="px-3 py-2.5 text-right font-semibold text-slate-500 dark:text-slate-400">OT approved</th>
             <SortTH field="otPay" label="OT Pay" sort={sort} setSort={setSort} num />
             <SortTH field="holidayPay" label="Holiday (+)" sort={sort} setSort={setSort} num />
             <SortTH field="totalDeductions" label="Deductions" sort={sort} setSort={setSort} num />
@@ -351,8 +351,8 @@ export default function PayrollTable({
             </tr>
           ))}
         </tbody>
-        <tfoot className="sticky bottom-0 bg-emerald-50 font-semibold dark:bg-emerald-900/30">
-          <tr className="border-t-2 border-emerald-300 dark:border-emerald-800">
+        <tfoot>
+          <tr>
             <td className="px-3 py-2.5" colSpan={2}>Total ({rows.length})</td>
             <td className="px-3 py-2.5 text-right tabular-nums">{formatMoney(totals.salary, c)}</td>
             <td className="px-3 py-2.5" colSpan={4}></td>

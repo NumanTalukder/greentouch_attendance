@@ -92,7 +92,7 @@ export default function SummaryTable({ summary, period }) {
         count={rows.length}
       />
       <TableWrap>
-        <thead className="sticky top-0 z-10 bg-slate-100 text-xs uppercase tracking-wide dark:bg-slate-800">
+        <thead>
           <tr>
             <SortTH field="id" label="ID" sort={sort} setSort={setSort} num />
             <SortTH field="name" label="Employee" sort={sort} setSort={setSort} />
