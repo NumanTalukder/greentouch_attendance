@@ -234,7 +234,7 @@ function DayEditor({ name, label, info, value, natural, tracked, isField, correc
 
 const TH = ({ children, right, className = "" }) => (
   <th
-    className={`whitespace-nowrap px-2 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 ${right ? "text-right" : "text-left"} ${className}`}
+    className={`sticky top-0 z-10 whitespace-nowrap bg-slate-50 px-2 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 shadow-[inset_0_-1px_0_theme(colors.slate.200)] dark:bg-slate-800 dark:text-slate-400 dark:shadow-[inset_0_-1px_0_theme(colors.slate.700)] ${right ? "text-right" : "text-left"} ${className}`}
   >
     {children}
   </th>
@@ -504,12 +504,13 @@ export default function SalarySheet({
           />
 
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="overflow-x-auto">
+            {/* scrolls in both directions inside the card so the header row (and totals) stay in view */}
+            <div className="max-h-[75vh] overflow-auto">
               {view === "staff" && (
                 <table className="w-full text-sm">
                   <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/60">
                     <tr>
-                      <TH className="sticky left-0 z-20 bg-slate-50 dark:bg-slate-800">
+                      <TH className="left-0 z-20">
                         <div className="flex items-center gap-2">
                           Employee
                           <button
@@ -662,7 +663,7 @@ export default function SalarySheet({
                       )
                     })}
                   </tbody>
-                  <tfoot className="border-t-2 border-slate-300 bg-slate-50 font-semibold dark:border-slate-700 dark:bg-slate-800/60">
+                  <tfoot className="sticky bottom-0 z-10 bg-slate-50 font-semibold dark:bg-slate-800 [&>tr>td]:shadow-[inset_0_2px_0_theme(colors.slate.300)] dark:[&>tr>td]:shadow-[inset_0_2px_0_theme(colors.slate.700)]">
                     <tr>
                       <TD className="sticky left-0 bg-slate-50 dark:bg-slate-800">Total</TD>
                       {showDays && <TD />}
@@ -729,7 +730,7 @@ export default function SalarySheet({
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="border-t-2 border-slate-300 bg-slate-50 font-semibold dark:border-slate-700 dark:bg-slate-800/60">
+                  <tfoot className="sticky bottom-0 z-10 bg-slate-50 font-semibold dark:bg-slate-800 [&>tr>td]:shadow-[inset_0_2px_0_theme(colors.slate.300)] dark:[&>tr>td]:shadow-[inset_0_2px_0_theme(colors.slate.700)]">
                     <tr>
                       <TD>Total</TD>
                       <TD right>{n0(t.dirGross)}</TD>
@@ -787,7 +788,7 @@ export default function SalarySheet({
                       )
                     })}
                   </tbody>
-                  <tfoot className="border-t-2 border-slate-300 bg-slate-50 font-semibold dark:border-slate-700 dark:bg-slate-800/60">
+                  <tfoot className="sticky bottom-0 z-10 bg-slate-50 font-semibold dark:bg-slate-800 [&>tr>td]:shadow-[inset_0_2px_0_theme(colors.slate.300)] dark:[&>tr>td]:shadow-[inset_0_2px_0_theme(colors.slate.700)]">
                     <tr>
                       <TD>Total</TD>
                       <TD /><TD />
@@ -1042,7 +1043,7 @@ function AdvancesLedger({ month, advances, setAdvances, people, currency }) {
               )
             })}
           </tbody>
-          <tfoot className="border-t-2 border-slate-300 bg-slate-50 font-semibold dark:border-slate-700 dark:bg-slate-800/60">
+          <tfoot className="sticky bottom-0 z-10 bg-slate-50 font-semibold dark:bg-slate-800 [&>tr>td]:shadow-[inset_0_2px_0_theme(colors.slate.300)] dark:[&>tr>td]:shadow-[inset_0_2px_0_theme(colors.slate.700)]">
             <tr>
               <TD>Total</TD>
               <TD /><TD /><TD />
