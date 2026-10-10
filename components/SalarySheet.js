@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Icon, Segmented, StatCard, Empty } from "./ui"
 import Modal from "./modals/Modal"
-import { formatMoney } from "@/lib/format"
+import { formatMoney, formatTime12 } from "@/lib/format"
 import { computeSalary, monthInfo, WD } from "@/lib/salaryCalc"
 import { buildSalaryInput, advanceSchedule, advanceProgress, advanceDue } from "@/lib/salaryInput"
 
@@ -60,18 +60,20 @@ function AutoNum({ value, src, autoTag, onChange, onRevert, disabled, label, wid
 // One day in the attendance strip. Opens the day editor on click.
 //   green solid P = worked a weekend / holiday (+1 day's pay)
 //   amber = late · orange = half day / left early · violet dot = corrected / edited
-function DayCell({ value, source, label, off, info, disabled, onOpen }) {
+function DayCell({ value, source, label, off, info, isField, disabled, onOpen }) {
   const absent = value === 0
   const half = value > 0 && value < 1
   const rec = info?.rec
   const worked = info?.worked
   const corrected = !!rec?.corrected || source === "override"
   const late = rec?.isLate
-  const halfish = rec && (rec.isHalf || (rec.leftEarly && !off && !rec.earlyExcused))
+  // leaving early costs half a day for office staff — on a worked Friday/holiday too
+  const earlyCut = rec?.leftEarly && !isField && !rec.earlyExcused
+  const halfish = rec && (rec.isHalf || earlyCut)
   const tone = absent
     ? "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300"
     : worked
-      ? "bg-emerald-600 text-white dark:bg-emerald-500"
+      ? `bg-emerald-600 text-white dark:bg-emerald-500 ${halfish ? "ring-2 ring-inset ring-orange-400" : late ? "ring-2 ring-inset ring-amber-400" : ""}`
       : half || halfish
         ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300"
         : late
@@ -79,16 +81,19 @@ function DayCell({ value, source, label, off, info, disabled, onOpen }) {
           : off
             ? "bg-slate-200/70 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
             : "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400"
+  const flags = [
+    late && "Late",
+    rec?.isHalf && "Half day",
+    rec?.leftEarly && !isField && (rec.earlyExcused ? "Left early (office work)" : "Left early → half day"),
+  ].filter(Boolean)
   const word = absent
     ? "Absent"
     : worked
-      ? "Worked a holiday (+1 day's pay)"
+      ? ["Worked a holiday (+1 day's pay)", ...flags].join(", ")
       : half
         ? "Half day"
-        : [late && "Late", rec?.isHalf && "Half day", rec?.leftEarly && !off && (rec.earlyExcused ? "Left early (office work)" : "Left early")]
-            .filter(Boolean)
-            .join(", ") || (off ? "Weekend / holiday" : "Present")
-  const times = rec?.first ? ` · in ${rec.first.slice(0, 5)}${rec.last && rec.last !== rec.first ? ` · out ${rec.last.slice(0, 5)}` : ""}` : ""
+        : flags.join(", ") || (off ? "Weekend / holiday" : "Present")
+  const times = rec?.first ? ` · in ${formatTime12(rec.first)}${rec.last && rec.last !== rec.first ? ` · out ${formatTime12(rec.last)}` : ""}` : ""
   const note = rec?.corrected?.note ? ` · corrected: ${rec.corrected.note}` : ""
   return (
     <button
@@ -124,7 +129,7 @@ function DayEditor({ name, label, info, value, natural, tracked, isField, correc
   const [err, setErr] = useState("")
   const machineMissed = !rec || (rec.sources || []).includes("manual")
   const canOnTime = rec && !machineMissed && (rec.isLate || rec.isHalf || c.onTime)
-  const canEarly = rec && !machineMissed && !off && !isField && (rec.leftEarly || c.excuseEarly)
+  const canEarly = rec && !machineMissed && !isField && (rec.leftEarly || c.excuseEarly)
   const any = c.onTime || c.excuseEarly || c.present
   const save = () => {
     if (any && c.note.trim().length < 3) return setErr("Please write a short note explaining the correction.")
@@ -149,12 +154,12 @@ function DayEditor({ name, label, info, value, natural, tracked, isField, correc
             {rec && !machineMissed ? (
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium tabular-nums">
-                  In {rec.first?.slice(0, 5) || "—"} · Out {rec.last && rec.punchCount > 1 ? rec.last.slice(0, 5) : "—"}
+                  In {formatTime12(rec.first)} · Out {rec.last && rec.punchCount > 1 ? formatTime12(rec.last) : "—"}
                 </span>
                 {off && chip("Holiday worked", "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300")}
                 {(rec.isLate || (correction?.onTime && rec.status)) && chip(correction?.onTime ? "Late → corrected" : "Late", "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300")}
                 {rec.isHalf && chip("Half day", "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300")}
-                {rec.leftEarly && !off && chip(rec.earlyExcused ? "Left early → office work" : "Left early", "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300")}
+                {rec.leftEarly && !isField && chip(rec.earlyExcused ? "Left early → office work" : "Left early", "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300")}
               </div>
             ) : (
               <span className="text-slate-600 dark:text-slate-300">
@@ -597,6 +602,11 @@ export default function SalarySheet({
                           <TD className={stickyCls}>
                             <div className="flex items-center gap-1.5">
                               <span className="font-medium text-slate-900 dark:text-slate-100">{s.name}</span>
+                              {meta.isField && (
+                                <span title="Field staff: no weekend, 3 paid leave days a month" className="rounded bg-sky-100 px-1 text-[10px] font-semibold text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
+                                  field
+                                </span>
+                              )}
                               {meta.tracked ? (
                                 <span title="Attendance, lates, half days and OT come from loaded attendance data" className="rounded bg-sky-100 px-1 text-[10px] font-semibold text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
                                   {meta.dataSources.includes("app") && !meta.dataSources.includes("machine") ? "app" : "machine"}
@@ -633,6 +643,7 @@ export default function SalarySheet({
                                     source={meta.sources[d]}
                                     off={meta.dayInfo[d].off}
                                     info={meta.dayInfo[d]}
+                                    isField={meta.isField}
                                     label={dayLabels[d].label}
                                     onOpen={() => setEditing({ i, d })}
                                   />

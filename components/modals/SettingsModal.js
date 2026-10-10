@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Modal from "./Modal"
 import { DEFAULT_SETTINGS } from "@/lib/constants"
+import { formatTime12 } from "@/lib/format"
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 const inp =
@@ -87,25 +88,25 @@ export default function SettingsModal({ settings, setSettings, onClose }) {
     >
       <Section title="Work schedule">
         <Field label="Office start">
-          <input type="time" value={draft.officeStart} onChange={(e) => set("officeStart", e.target.value)} className={inp} />
+          <Time12 value={draft.officeStart} onChange={(v) => set("officeStart", v)} />
         </Field>
         <Field label="Office end">
-          <input type="time" value={draft.officeEnd} onChange={(e) => set("officeEnd", e.target.value)} className={inp} />
+          <Time12 value={draft.officeEnd} onChange={(v) => set("officeEnd", v)} />
         </Field>
         <Field label="Grace (minutes)" hint="On-time window after start">
           <input type="number" value={draft.graceMinutes} onChange={(e) => set("graceMinutes", e.target.value)} className={`${inp} w-full`} />
         </Field>
         <Field label="Half-day after" hint="Arrive later → half day">
-          <input type="time" value={draft.halfDayStart} onChange={(e) => set("halfDayStart", e.target.value)} className={inp} />
+          <Time12 value={draft.halfDayStart} onChange={(v) => set("halfDayStart", v)} />
         </Field>
         <Field label="Overtime starts" hint="OT accrues after this">
-          <input type="time" value={draft.otStart} onChange={(e) => set("otStart", e.target.value)} className={inp} />
+          <Time12 value={draft.otStart} onChange={(v) => set("otStart", v)} />
         </Field>
         <Field label="“Stayed late” after" hint="Flag long days">
-          <input type="time" value={draft.otThreshold} onChange={(e) => set("otThreshold", e.target.value)} className={inp} />
+          <Time12 value={draft.otThreshold} onChange={(v) => set("otThreshold", v)} />
         </Field>
         <Field label="Day boundary" hint="Punches before roll to prev. day">
-          <input type="time" value={draft.dayBoundary} onChange={(e) => set("dayBoundary", e.target.value)} className={inp} />
+          <Time12 value={draft.dayBoundary} onChange={(v) => set("dayBoundary", v)} />
         </Field>
       </Section>
 
@@ -180,7 +181,7 @@ export default function SettingsModal({ settings, setSettings, onClose }) {
             Subtract one day of pay per absent day
           </label>
         </Field>
-        <Field label="Leaving early" hint={`Office staff leaving before ${draft.officeEnd}; excusable per day with a note`}>
+        <Field label="Leaving early" hint={`Office staff leaving before ${formatTime12(draft.officeEnd)}; excusable per day with a note`}>
           <label className="flex items-center gap-2 py-1.5 text-sm text-slate-600 dark:text-slate-300">
             <input type="checkbox" checked={draft.earlyLeaveHalfDay !== false} onChange={(e) => set("earlyLeaveHalfDay", e.target.checked)} className="accent-emerald-500" />
             Counts as a half day
@@ -260,6 +261,39 @@ const Section = ({ title, children, cols = 3 }) => (
     </div>
   </div>
 )
+
+// 12-hour time picker. Stores "HH:MM" (24h) like the rest of the app, but always
+// shows hour : minute AM/PM — the browser's own time box follows the computer's
+// clock setting and can show 24h.
+const pad = (n) => String(n).padStart(2, "0")
+const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5)
+function Time12({ value = "00:00", onChange }) {
+  const [h24 = 0, m = 0] = String(value).split(":").map(Number)
+  const pm = h24 >= 12
+  const h12 = h24 % 12 || 12
+  const emit = (h, min, isPm) => onChange(`${pad((h % 12) + (isPm ? 12 : 0))}:${pad(min)}`)
+  const sel = `${inp} cursor-pointer appearance-none text-center tabular-nums`
+  const minutes = MINUTES.includes(m) ? MINUTES : [...MINUTES, m].sort((a, b) => a - b)
+  return (
+    <span className="inline-flex items-center gap-1">
+      <select aria-label="Hour" value={h12} onChange={(e) => emit(Number(e.target.value), m, pm)} className={`${sel} w-12`}>
+        {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
+          <option key={h} value={h}>{h}</option>
+        ))}
+      </select>
+      <span className="text-slate-400">:</span>
+      <select aria-label="Minute" value={m} onChange={(e) => emit(h12, Number(e.target.value), pm)} className={`${sel} w-12`}>
+        {minutes.map((x) => (
+          <option key={x} value={x}>{pad(x)}</option>
+        ))}
+      </select>
+      <select aria-label="AM or PM" value={pm ? "PM" : "AM"} onChange={(e) => emit(h12, m, e.target.value === "PM")} className={`${sel} w-14`}>
+        <option>AM</option>
+        <option>PM</option>
+      </select>
+    </span>
+  )
+}
 
 const Field = ({ label, hint, children, full }) => (
   <label className={`block ${full ? "col-span-full" : ""}`}>

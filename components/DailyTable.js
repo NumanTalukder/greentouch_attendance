@@ -2,11 +2,11 @@
 
 import { useMemo, useState } from "react"
 import { Badge, Icon, SortTH, StatusBadge, Empty } from "./ui"
+import { officeFirst } from "@/lib/constants"
 import {
   formatDate,
   formatTime12,
   minutesToHM,
-  minutesToClock,
 } from "@/lib/format"
 import { exportCSV, printReport } from "@/lib/export"
 import { formatDateLong } from "@/lib/format"
@@ -36,6 +36,8 @@ export default function DailyTable({ records, period, settings }) {
       return r.status === filter
     })
     rows = rows.sort((a, b) => {
+      const g = officeFirst(a, b)
+      if (g) return g
       const dir = sort.dir === "asc" ? 1 : -1
       const av = a[sort.field]
       const bv = b[sort.field]
@@ -86,7 +88,7 @@ export default function DailyTable({ records, period, settings }) {
         { label: "In", num: true, render: (r) => formatTime12(r.first) },
         { label: "Out", num: true, render: (r) => formatTime12(r.last) },
         { label: "Work", num: true, render: (r) => minutesToHM(r.workMinutes) },
-        { label: "OT", num: true, render: (r) => minutesToClock(r.otMinutes) },
+        { label: "OT", num: true, render: (r) => minutesToHM(r.otMinutes) },
         { label: "Status", render: (r) => r.status },
       ],
       rows: filtered,
@@ -158,8 +160,9 @@ export default function DailyTable({ records, period, settings }) {
                 {r.id}
               </td>
               <td className="px-3 py-2">
-                <div className="font-medium text-slate-800 dark:text-slate-100">
+                <div className="flex items-center gap-1.5 font-medium text-slate-800 dark:text-slate-100">
                   {r.name}
+                  {r.category === "field" && <Badge tone="blue">field</Badge>}
                 </div>
                 <div className="text-xs text-slate-400">{r.department}</div>
               </td>
@@ -183,7 +186,7 @@ export default function DailyTable({ records, period, settings }) {
               </td>
               <td className="px-3 py-2 text-right tabular-nums">
                 {r.otMinutes > 0 ? (
-                  <Badge tone="blue">{minutesToClock(r.otMinutes)}</Badge>
+                  <Badge tone="blue">{minutesToHM(r.otMinutes)}</Badge>
                 ) : (
                   <span className="text-slate-300 dark:text-slate-600">—</span>
                 )}

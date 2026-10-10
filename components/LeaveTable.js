@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { Badge, Icon, SortTH, Empty } from "./ui"
+import { officeFirst } from "@/lib/constants"
 import { Toolbar, TableWrap } from "./DailyTable"
 import { exportCSV } from "@/lib/export"
 
@@ -19,6 +20,8 @@ export default function LeaveTable({ leave, period, monthKey, onEarned, onSick, 
           !q || `${r.name} ${r.id} ${r.department}`.toLowerCase().includes(q),
       )
       .sort((a, b) => {
+        const g = officeFirst(a, b)
+        if (g) return g
         const dir = sort.dir === "asc" ? 1 : -1
         if (a[sort.field] < b[sort.field]) return -1 * dir
         if (a[sort.field] > b[sort.field]) return 1 * dir

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import Modal from "./Modal"
 import { Badge, Icon } from "../ui"
-import { blankEmployee, nextFieldId } from "@/lib/constants"
+import { blankEmployee, nextFieldId, officeFirst } from "@/lib/constants"
 
 const inputCls =
   "w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-emerald-400 dark:border-slate-700 dark:bg-slate-950"
@@ -113,7 +113,7 @@ export default function UsersModal({ employees = {}, setEmployees, onClose }) {
   }
 
   const empName = (id) => employees[id]?.name || (id ? `#${id}` : "—")
-  const empIds = Object.keys(employees).sort((a, b) => Number(a) - Number(b))
+  const empIds = Object.keys(employees).sort((a, b) => officeFirst(employees[a], employees[b]) || Number(a) - Number(b))
 
   return (
     <Modal

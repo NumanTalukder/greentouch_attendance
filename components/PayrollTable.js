@@ -1,7 +1,8 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Icon, SortTH, Empty } from "./ui"
+import { Badge, Icon, SortTH, Empty } from "./ui"
+import { officeFirst } from "@/lib/constants"
 import { Toolbar, TableWrap } from "./DailyTable"
 import { formatMoney, formatDateLong } from "@/lib/format"
 import { exportCSV, printReport, printPayslips } from "@/lib/export"
@@ -32,6 +33,8 @@ export default function PayrollTable({
           !q || `${r.name} ${r.id} ${r.department}`.toLowerCase().includes(q),
       )
       .sort((a, b) => {
+        const g = officeFirst(a, b)
+        if (g) return g
         const dir = sort.dir === "asc" ? 1 : -1
         if (a[sort.field] < b[sort.field]) return -1 * dir
         if (a[sort.field] > b[sort.field]) return 1 * dir
@@ -232,7 +235,10 @@ export default function PayrollTable({
             >
               <td className={`${numCell} text-slate-400`}>{r.id}</td>
               <td className="px-3 py-2">
-                <div className="font-medium text-slate-800 dark:text-slate-100">{r.name}</div>
+                <div className="flex items-center gap-1.5 font-medium text-slate-800 dark:text-slate-100">
+                  {r.name}
+                  {r.category === "field" && <Badge tone="blue">field</Badge>}
+                </div>
                 <div className="text-xs text-slate-400">{r.designation} · {r.department}</div>
               </td>
               <td className={`${numCell} text-slate-700 dark:text-slate-200`}>{formatMoney(r.salary, c)}</td>

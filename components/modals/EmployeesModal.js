@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import Modal from "./Modal"
 import { Badge, Icon } from "../ui"
-import { blankEmployee } from "@/lib/constants"
+import { blankEmployee, officeFirst } from "@/lib/constants"
 
 const inputCls =
   "rounded-md border border-slate-200 bg-white px-2 py-1 text-sm outline-none focus:border-emerald-400 dark:border-slate-700 dark:bg-slate-950"
@@ -31,7 +31,7 @@ export default function EmployeesModal({
             .includes(q)
         )
       })
-      .sort((a, b) => Number(a) - Number(b))
+      .sort((a, b) => officeFirst(employees[a], employees[b]) || Number(a) - Number(b))
   }, [employees, search])
 
   const patch = (id, key, value) =>

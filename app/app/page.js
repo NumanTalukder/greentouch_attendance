@@ -6,8 +6,9 @@ import { useLang, LangToggle } from "@/lib/i18n"
 const fmtTime = (iso) =>
   iso
     ? new Date(iso).toLocaleTimeString("en-US", {
-        hour: "2-digit",
+        hour: "numeric",
         minute: "2-digit",
+        hour12: true,
         timeZone: "Asia/Dhaka",
       })
     : "—"

@@ -9,8 +9,9 @@ const fmt = (iso) =>
     ? new Date(iso).toLocaleString("en-US", {
         day: "2-digit",
         month: "short",
-        hour: "2-digit",
+        hour: "numeric",
         minute: "2-digit",
+        hour12: true,
         timeZone: "Asia/Dhaka",
       })
     : "—"

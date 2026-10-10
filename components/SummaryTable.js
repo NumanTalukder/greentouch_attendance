@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from "react"
 import { Badge, Bar, Icon, SortTH, Empty } from "./ui"
+import { officeFirst } from "@/lib/constants"
 import { Toolbar, TableWrap } from "./DailyTable"
 import {
   minutesToHM,
-  minutesToClock,
   formatPercent,
   formatDateLong,
 } from "@/lib/format"
@@ -23,6 +23,8 @@ export default function SummaryTable({ summary, period }) {
           !q || `${s.name} ${s.id} ${s.department}`.toLowerCase().includes(q),
       )
       .sort((a, b) => {
+        const g = officeFirst(a, b)
+        if (g) return g
         const dir = sort.dir === "asc" ? 1 : -1
         if (a[sort.field] < b[sort.field]) return -1 * dir
         if (a[sort.field] > b[sort.field]) return 1 * dir
@@ -63,7 +65,7 @@ export default function SummaryTable({ summary, period }) {
         { label: "Late", num: true, render: (r) => r.lateDays },
         { label: "Half", num: true, render: (r) => r.halfDays },
         { label: "Work", num: true, render: (r) => minutesToHM(r.workMinutes) },
-        { label: "OT", num: true, render: (r) => minutesToClock(r.otMinutes) },
+        { label: "OT", num: true, render: (r) => minutesToHM(r.otMinutes) },
         { label: "Att%", num: true, render: (r) => Math.round(r.attendanceRate * 100) + "%" },
       ],
       rows,
@@ -119,6 +121,7 @@ export default function SummaryTable({ summary, period }) {
                   <span className="font-medium text-slate-800 dark:text-slate-100">
                     {s.name}
                   </span>
+                  {s.category === "field" && <Badge tone="blue">field</Badge>}
                   {!s.known && <Badge tone="violet">unregistered</Badge>}
                   {s.noData && <Badge tone="slate">no punches</Badge>}
                 </div>
@@ -147,7 +150,7 @@ export default function SummaryTable({ summary, period }) {
               </td>
               <td className="px-3 py-2 text-right tabular-nums">
                 {s.otMinutes > 0 ? (
-                  <Badge tone="blue">{minutesToClock(s.otMinutes)}</Badge>
+                  <Badge tone="blue">{minutesToHM(s.otMinutes)}</Badge>
                 ) : (
                   <span className="text-slate-300 dark:text-slate-600">—</span>
                 )}
